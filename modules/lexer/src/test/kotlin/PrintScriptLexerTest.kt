@@ -1,8 +1,11 @@
+import common.source.SourcePosition
 import common.token.TokenType
+import lexer.LexicalException
 import lexer.PrintScriptLexer
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 
 class PrintScriptLexerTest {
 
@@ -57,6 +60,58 @@ class PrintScriptLexerTest {
     }
 
     @Test
+    fun `tokenizes a string literal`() {
+        val source = "'Hello, World!'".reader()
+
+        val tokens = lexer.tokenize(source).toList()
+
+        assertEquals(
+            listOf(
+                TokenType.STRING_LITERAL,
+                TokenType.EOF,
+            ),
+            tokens.map { it.type },
+        )
+    }
+
+    @Test
+    fun `tokenizes a number literal`() {
+        val source = "12.5".reader()
+
+        val tokens = lexer.tokenize(source).toList()
+
+        assertEquals(
+            listOf(
+                TokenType.NUMBER_LITERAL,
+                TokenType.EOF,
+            ),
+            tokens.map { it.type },
+        )
+    }
+
+
+    @Test
+    fun `tokenizes a variable declaration`() {
+        val source = "let name: string = 'Joe';".reader()
+
+        val tokens = lexer.tokenize(source).toList()
+
+        assertEquals(
+            listOf(
+                TokenType.LET,
+                TokenType.IDENTIFIER,
+                TokenType.COLON,
+                TokenType.TYPE_STRING,
+                TokenType.ASSIGNMENT_OPERATOR,
+                TokenType.STRING_LITERAL,
+                TokenType.SEMICOLON,
+                TokenType.EOF,
+            ),
+            tokens.map { it.type },
+        )
+    }
+
+    @Test
     fun `tokenizes a complete PrintScript program`() {
         val source = """
         let name: string = 'Joe';
@@ -99,6 +154,49 @@ class PrintScriptLexerTest {
                 TokenType.EOF,
             ),
             types,
+        )
+    }
+
+
+    @Test
+    fun `throws lexical exception for unexpected character`() {
+        val exception = assertFailsWith<LexicalException> {
+            lexer.tokenize("let @".reader()).toList()
+        }
+
+        assertEquals(
+            SourcePosition(
+                line = 1,
+                column = 5,
+                offset = 4,
+            ),
+            exception.position,
+        )
+
+        assertEquals(
+            "Unexpected character '@' at line 1, column 5",
+            exception.message,
+        )
+    }
+
+    @Test
+    fun `throws lexical exception for unterminated string`() {
+        val exception = assertFailsWith<LexicalException> {
+            lexer.tokenize("\"Hello".reader()).toList()
+        }
+
+        assertEquals(
+            SourcePosition(
+                line = 1,
+                column = 1,
+                offset = 0,
+            ),
+            exception.position,
+        )
+
+        assertEquals(
+            "Unterminated string at line 1, column 1",
+            exception.message,
         )
     }
 }
