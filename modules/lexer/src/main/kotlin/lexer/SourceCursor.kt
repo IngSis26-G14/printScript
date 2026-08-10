@@ -1,3 +1,5 @@
+package lexer
+
 import common.source.SourcePosition
 import java.io.Reader
 import java.util.ArrayDeque

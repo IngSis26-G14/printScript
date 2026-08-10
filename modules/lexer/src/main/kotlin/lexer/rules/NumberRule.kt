@@ -1,6 +1,6 @@
-package rules
+package lexer.rules
 
-import SourceCursor
+import lexer.SourceCursor
 import common.source.SourceRange
 import common.token.Token
 import common.token.TokenType
