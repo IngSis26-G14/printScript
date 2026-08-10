@@ -7,4 +7,6 @@ data class Token(
     val lexeme: String,
     val range: SourceRange,
 
-    )
+    ) {
+    constructor(type: TokenType, lexeme: String, range: Any) : this(type, lexeme, range)
+}

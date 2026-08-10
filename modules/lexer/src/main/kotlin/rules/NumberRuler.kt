@@ -1,7 +1,6 @@
 package rules
 
 import SourceCursor
-import common.source.SourcePosition
 import common.source.SourceRange
 import common.token.Token
 import common.token.TokenType
