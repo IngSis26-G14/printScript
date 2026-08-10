@@ -5,7 +5,7 @@ import common.source.SourceRange
 import common.token.Token
 import common.token.TokenType
 
-internal class WordRule: LexerRule {
+internal class WordRule : LexerRule {
 
     private val reservedWords = mapOf(
         "let" to TokenType.LET,
@@ -14,17 +14,18 @@ internal class WordRule: LexerRule {
         "string" to TokenType.TYPE_STRING,
     )
 
-
-    override fun matches(cursor: SourceCursor): Boolean {
-        val character = cursor.peek()
-        return character?.isLetter() == true || character == '_'
-    }
+    override fun matches(cursor: SourceCursor): Boolean =
+        cursor.peek()?.isIdentifierStart() == true
 
     override fun read(cursor: SourceCursor): Token {
-       val start = cursor.currentPosition()
+        check(matches(cursor)) {
+            "WordRule must start at a letter or underscore"
+        }
+
+        val start = cursor.currentPosition()
 
         val lexeme = buildString {
-            while ( cursor.peek()?.isIdentifierCharacter() == true){
+            while (cursor.peek()?.isIdentifierPart() == true) {
                 append(cursor.advance())
             }
         }
@@ -36,6 +37,9 @@ internal class WordRule: LexerRule {
         )
     }
 
-    private fun Char.isIdentifierCharacter(): Boolean =
+    private fun Char.isIdentifierStart(): Boolean =
+        isLetter() || this == '_'
+
+    private fun Char.isIdentifierPart(): Boolean =
         isLetterOrDigit() || this == '_'
 }
