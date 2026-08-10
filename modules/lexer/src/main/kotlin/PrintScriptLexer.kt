@@ -1,72 +1,70 @@
-import common.token.TokenType
 import common.source.SourceRange
 import common.token.Token
+import common.token.TokenType
+import rules.LexerRule
+import rules.NumberRule
+import rules.StringRule
+import rules.SymbolRule
+import rules.WordRule
 import java.io.Reader
 
-class PrintScriptLexer: Lexer {
+class PrintScriptLexer internal constructor(
+    private val rules: List<LexerRule>,
+    ) : Lexer {
 
-
-    private val singleCharacterTokens = mapOf(
-        '(' to TokenType.LEFT_PARENTHESIS,
-        ')' to TokenType.RIGHT_PARENTHESIS,
-        '=' to TokenType.ASSIGNMENT_OPERATOR,
-        '-' to TokenType.SUBTRACTION_OPERATOR,
-        '+' to TokenType.ADDITION_OPERATOR,
-        '/' to TokenType.DIVISION_OPERATOR,
-        '*' to TokenType.MULTIPLICATION_OPERATOR,
-        ';' to TokenType.SEMICOLON,
-        ':' to TokenType.COLON,
+    constructor() : this(
+        listOf(
+            StringRule(),
+            NumberRule(),
+            WordRule(),
+            SymbolRule(),
+        )
     )
 
-    override fun tokenize(source: Reader): Sequence<Token> {
-        val cursor = SourceCursor(source.readText())
-        val tokens = mutableListOf<Token>()
 
-        while(!cursor.isAtEnd()){
-            val character = cursor.peek()!!
+    override fun tokenize(source: Reader): Sequence<Token> =
+        sequence {
+            val cursor = SourceCursor(source)
 
-            when{
-                character.isWhitespace() -> {
-                    cursor.advance()
+            while (!cursor.isAtEnd()) {
+                skipWhiteSpace(cursor)
+
+                if (cursor.isAtEnd()) {
+                    break
                 }
 
-                singleCharacterTokens.containsKey(character)-> {
-                    tokens.add(readSingleCharacterToken(cursor))
+                val rule = rules.firstOrNull() { it.matches(cursor) }
+                    ?: throw unexpectedCharacter(cursor)
+
+                val previousOffset = cursor.offset
+                val token = rule.read(cursor)
+
+                check(cursor.offset > previousOffset) {
+                    "${rule::class.simpleName} returned a token " + "without consuming input"
                 }
 
-                else -> {
-                    val position = cursor.currentPosition()
-
-                    throw LexicalException(
-                        message = "Unexpected character: '$character'" + "at line ${position.line}, column ${position.column}",
-                        position = position
-                    )
-                }
+                yield(token)
             }
+            yield(createEndOfFileToken(cursor))
+        }.constrainOnce()
+
+
+    private fun skipWhiteSpace(cursor: SourceCursor) {
+        while (cursor.peek()?.isWhitespace() == true) {
+            cursor.advance()
         }
-        tokens.add(createEndOfFileToken(cursor))
-        return tokens.asSequence()
     }
 
-    private fun readSingleCharacterToken(
-        cursor: SourceCursor,
-    ): Token {
-        val start = cursor.currentPosition()
-        val character = cursor.advance()
-        val end = cursor.currentPosition()
+    private fun unexpectedCharacter(cursor: SourceCursor,
+    ): LexicalException {
+        val position = cursor.currentPosition()
+        val character = cursor.peek()
 
-        val type =
-            requireNotNull(singleCharacterTokens[character]) {
-                "Character '$character' is not a registered token"
-            }
-
-        return Token(
-            type = type,
-            lexeme = character.toString(),
-            range = SourceRange(
-                start = start,
-                end = end,
-            ),
+        return LexicalException(
+            message =
+                "Unexpected character '$character' at " +
+                    "line ${position.line}, column ${position.column}",
+            position = position,
         )
     }
 
@@ -85,3 +83,6 @@ class PrintScriptLexer: Lexer {
         )
     }
 }
+
+
+

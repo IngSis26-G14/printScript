@@ -5,7 +5,7 @@ import common.source.SourceRange
 import common.token.Token
 import common.token.TokenType
 
-internal class NumberRuler: LexerRule {
+internal class NumberRule: LexerRule {
 
     override fun matches(cursor: SourceCursor): Boolean =
         cursor.peek()?.isDigit() == true

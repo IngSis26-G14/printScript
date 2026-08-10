@@ -1,8 +1,14 @@
 import common.source.SourcePosition
+import java.io.Reader
+import java.util.ArrayDeque
 
-internal class SourceCursor (
-    private val source: String,
+internal class SourceCursor(
+    source: Reader,
     ) {
+
+    private val reader = source.buffered()
+    private var lookahead = ArrayDeque<Char>()
+    private var reachedEnd = false
 
     var offset: Int = 0
         private set
@@ -13,27 +19,27 @@ internal class SourceCursor (
     var column: Int = 1
         private set
 
-    fun isAtEnd(): Boolean {
-        return offset >= source.length
-    }
+    fun isAtEnd(): Boolean =
+        peek() == null
 
     fun peek(distance: Int = 0): Char? {
         require(distance >= 0) {
             "Peek distance cannot be negative"
         }
 
-        return source.getOrNull(offset + distance)
+        fillLookahead(distance + 1)
+        return lookahead.elementAtOrNull(distance)
     }
 
     fun advance(): Char {
-        check(!isAtEnd()){
-            "Cannot advance beyond the end of the source."
+        val character = checkNotNull(peek()) {
+            "Cannot advance beyond the end of the source"
         }
 
-        val character = source[offset]
+        lookahead.removeFirst()
         offset++
 
-        if(character == '\n'){
+        if (character == '\n') {
             line++
             column = 1
         } else {
@@ -42,12 +48,22 @@ internal class SourceCursor (
         return character
     }
 
-    fun currentPosition(): SourcePosition{
-        return SourcePosition(
+    fun currentPosition(): SourcePosition =
+        SourcePosition(
             line = line,
             column = column,
             offset = offset
         )
-    }
 
+    private fun fillLookahead(requiredSize: Int) {
+        while (lookahead.size < requiredSize && !reachedEnd) {
+            val next = reader.read()
+
+            if (next == -1) {
+                reachedEnd = true
+            } else {
+                lookahead.add(next.toChar())
+            }
+        }
+    }
 }
