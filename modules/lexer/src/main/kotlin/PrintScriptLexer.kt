@@ -1,25 +1,88 @@
-import com.ingsis.g14.printscript.common.token.TokenType
+import common.source.SourceRange
 import common.token.Token
+import common.token.TokenType
+import rules.LexerRule
+import rules.NumberRule
+import rules.StringRule
+import rules.SymbolRule
+import rules.WordRule
 import java.io.Reader
 
-class PrintScriptLexer: Lexer {
+class PrintScriptLexer internal constructor(
+    private val rules: List<LexerRule>,
+    ) : Lexer {
 
-
-    private val singleCharacterToken = mapOf(
-        '(' to TokenType.LEFT_PARENTHESIS,
-        ')' to TokenType.RIGHT_PARENTHESIS,
-        '=' to TokenType.ASSIGNMENT_OPERATOR,
-        '-' to TokenType.SUBTRACTION_OPERATOR,
-        '+' to TokenType.ADDITION_OPERATOR,
-        '/' to TokenType.DIVISION_OPERATOR,
-        '*' to TokenType.MULTIPLICATION_OPERATOR,
-        ';' to TokenType.SEMICOLON,
-        ':' to TokenType.COLON,
+    constructor() : this(
+        listOf(
+            StringRule(),
+            NumberRule(),
+            WordRule(),
+            SymbolRule(),
+        )
     )
 
-    override fun tokenize(source: Reader): Sequence<Token> {
-        // a completar
-        return emptySequence()
+
+    override fun tokenize(source: Reader): Sequence<Token> =
+        sequence {
+            val cursor = SourceCursor(source)
+
+            while (!cursor.isAtEnd()) {
+                skipWhiteSpace(cursor)
+
+                if (cursor.isAtEnd()) {
+                    break
+                }
+
+                val rule = rules.firstOrNull() { it.matches(cursor) }
+                    ?: throw unexpectedCharacter(cursor)
+
+                val previousOffset = cursor.offset
+                val token = rule.read(cursor)
+
+                check(cursor.offset > previousOffset) {
+                    "${rule::class.simpleName} returned a token " + "without consuming input"
+                }
+
+                yield(token)
+            }
+            yield(createEndOfFileToken(cursor))
+        }.constrainOnce()
+
+
+    private fun skipWhiteSpace(cursor: SourceCursor) {
+        while (cursor.peek()?.isWhitespace() == true) {
+            cursor.advance()
+        }
     }
 
+    private fun unexpectedCharacter(cursor: SourceCursor,
+    ): LexicalException {
+        val position = cursor.currentPosition()
+        val character = cursor.peek()
+
+        return LexicalException(
+            message =
+                "Unexpected character '$character' at " +
+                    "line ${position.line}, column ${position.column}",
+            position = position,
+        )
+    }
+
+    private fun createEndOfFileToken(
+        cursor: SourceCursor,
+    ): Token {
+        val position = cursor.currentPosition()
+
+        return Token(
+            type = TokenType.EOF,
+            lexeme = "",
+            range = SourceRange(
+                start = position,
+                end = position,
+            ),
+        )
+    }
 }
+
+
+
