@@ -1,3 +1,5 @@
+package lexer
+
 import common.source.SourcePosition
 
 class LexicalException (

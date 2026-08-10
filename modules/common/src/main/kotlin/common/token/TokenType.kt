@@ -1,4 +1,4 @@
-package com.ingsis.g14.printscript.common.token
+package common.token
 
 enum class TokenType {
 
