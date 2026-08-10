@@ -1,8 +1,11 @@
+import common.source.SourcePosition
 import common.token.TokenType
+import lexer.LexicalException
 import lexer.PrintScriptLexer
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 
 class PrintScriptLexerTest {
 
@@ -151,6 +154,49 @@ class PrintScriptLexerTest {
                 TokenType.EOF,
             ),
             types,
+        )
+    }
+
+
+    @Test
+    fun `throws lexical exception for unexpected character`() {
+        val exception = assertFailsWith<LexicalException> {
+            lexer.tokenize("let @".reader()).toList()
+        }
+
+        assertEquals(
+            SourcePosition(
+                line = 1,
+                column = 5,
+                offset = 4,
+            ),
+            exception.position,
+        )
+
+        assertEquals(
+            "Unexpected character '@' at line 1, column 5",
+            exception.message,
+        )
+    }
+
+    @Test
+    fun `throws lexical exception for unterminated string`() {
+        val exception = assertFailsWith<LexicalException> {
+            lexer.tokenize("\"Hello".reader()).toList()
+        }
+
+        assertEquals(
+            SourcePosition(
+                line = 1,
+                column = 1,
+                offset = 0,
+            ),
+            exception.position,
+        )
+
+        assertEquals(
+            "Unterminated string at line 1, column 1",
+            exception.message,
         )
     }
 }
