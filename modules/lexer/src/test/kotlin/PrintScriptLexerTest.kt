@@ -55,4 +55,50 @@ class PrintScriptLexerTest {
         assertEquals("+", tokens[0].lexeme)
         assertEquals(";", tokens[1].lexeme)
     }
+
+    @Test
+    fun `tokenizes a complete PrintScript program`() {
+        val source = """
+        let name: string = 'Joe';
+        let result: number = 12.5 + 4;
+        println(name + " result");
+    """.trimIndent().reader()
+
+        val types = lexer.tokenize(source)
+            .map { it.type }
+            .toList()
+
+        assertEquals(
+            listOf(
+                TokenType.LET,
+                TokenType.IDENTIFIER,
+                TokenType.COLON,
+                TokenType.TYPE_STRING,
+                TokenType.ASSIGNMENT_OPERATOR,
+                TokenType.STRING_LITERAL,
+                TokenType.SEMICOLON,
+
+                TokenType.LET,
+                TokenType.IDENTIFIER,
+                TokenType.COLON,
+                TokenType.TYPE_NUMBER,
+                TokenType.ASSIGNMENT_OPERATOR,
+                TokenType.NUMBER_LITERAL,
+                TokenType.ADDITION_OPERATOR,
+                TokenType.NUMBER_LITERAL,
+                TokenType.SEMICOLON,
+
+                TokenType.PRINTLN,
+                TokenType.LEFT_PARENTHESIS,
+                TokenType.IDENTIFIER,
+                TokenType.ADDITION_OPERATOR,
+                TokenType.STRING_LITERAL,
+                TokenType.RIGHT_PARENTHESIS,
+                TokenType.SEMICOLON,
+
+                TokenType.EOF,
+            ),
+            types,
+        )
+    }
 }
