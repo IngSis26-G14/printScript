@@ -56,6 +56,58 @@ class PrintScriptLexerTest {
     }
 
     @Test
+    fun `tokenizes a string literal`() {
+        val source = "'Hello, World!'".reader()
+
+        val tokens = lexer.tokenize(source).toList()
+
+        assertEquals(
+            listOf(
+                TokenType.STRING_LITERAL,
+                TokenType.EOF,
+            ),
+            tokens.map { it.type },
+        )
+    }
+
+    @Test
+    fun `tokenizes a number literal`() {
+        val source = "12.5".reader()
+
+        val tokens = lexer.tokenize(source).toList()
+
+        assertEquals(
+            listOf(
+                TokenType.NUMBER_LITERAL,
+                TokenType.EOF,
+            ),
+            tokens.map { it.type },
+        )
+    }
+
+
+    @Test
+    fun `tokenizes a variable declaration`() {
+        val source = "let name: string = 'Joe';".reader()
+
+        val tokens = lexer.tokenize(source).toList()
+
+        assertEquals(
+            listOf(
+                TokenType.LET,
+                TokenType.IDENTIFIER,
+                TokenType.COLON,
+                TokenType.TYPE_STRING,
+                TokenType.ASSIGNMENT_OPERATOR,
+                TokenType.STRING_LITERAL,
+                TokenType.SEMICOLON,
+                TokenType.EOF,
+            ),
+            tokens.map { it.type },
+        )
+    }
+
+    @Test
     fun `tokenizes a complete PrintScript program`() {
         val source = """
         let name: string = 'Joe';
