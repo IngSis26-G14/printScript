@@ -11,7 +11,7 @@ internal class StringRule: LexerRule {
 
 
     override fun matches(cursor: SourceCursor): Boolean =
-        cursor.peek() == '"'
+        cursor.peek() == '"' || cursor.peek() == '\''
 
     override fun read(cursor: SourceCursor): Token {
         check(matches(cursor)){
@@ -19,6 +19,7 @@ internal class StringRule: LexerRule {
         }
 
         val start = cursor.currentPosition()
+        val delimiter = checkNotNull(cursor.peek())
 
         val lexeme = buildString {
             append(cursor.advance()) // consume the opening double quote
@@ -33,7 +34,7 @@ internal class StringRule: LexerRule {
 
                 append(cursor.advance())
 
-                if (character == '"'){
+                if (character == delimiter){
                     break
                 }
             }
@@ -50,7 +51,7 @@ internal class StringRule: LexerRule {
 
     private fun unterminatedString(start: SourcePosition): LexicalException =
         LexicalException(
-            message = "Unterminate string at line ${start.line}," + "column ${start.column}",
+            message = "Unterminated string at line ${start.line}, " + "column ${start.column}",
             position = start,
-    )
+        )
 }
