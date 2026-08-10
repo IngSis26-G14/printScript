@@ -1,8 +1,9 @@
 plugins {
     id 'org.jetbrains.kotlin.jvm' version '2.2.0'
+    id("org.jetbrains.kotlinx.kover") version "0.9.9"
 }
 
-group = 'aseca'
+group = 'com.ingsis.grupo14'
 version = '1.0-SNAPSHOT'
 
 repositories {
@@ -11,6 +12,10 @@ repositories {
 
 dependencies {
     testImplementation 'org.jetbrains.kotlin:kotlin-test'
+    kover(project(":modules:common"))
+    kover(project(":modules:lexer"))
+    kover(project(":modules:parser"))
+    kover(project(":modules:interpreter"))
 }
 
 test {
@@ -18,4 +23,15 @@ test {
 }
 kotlin {
     jvmToolchain(21)
+}
+
+kover {
+    //noinspection GroovyAssignabilityCheck
+    reports{
+        verify {
+            rule {
+                minBound(80)
+            }
+        }
+    }
 }

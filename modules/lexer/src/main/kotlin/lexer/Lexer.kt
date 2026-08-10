@@ -1,3 +1,5 @@
+package lexer
+
 import common.token.Token
 import java.io.Reader
 
