@@ -17,8 +17,12 @@ internal class SourceCursor (
         return offset >= source.length
     }
 
-    fun peek(): Char? {
-        return source.getOrNull(offset)
+    fun peek(distance: Int = 0): Char? {
+        require(distance >= 0) {
+            "Peek distance cannot be negative"
+        }
+
+        return source.getOrNull(offset + distance)
     }
 
     fun advance(): Char {
