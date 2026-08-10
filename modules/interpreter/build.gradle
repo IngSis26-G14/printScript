@@ -1,8 +1,9 @@
 plugins {
     id 'org.jetbrains.kotlin.jvm' version '2.2.0'
+    id("org.jetbrains.kotlinx.kover")
 }
 
-group = 'aseca'
+group = 'com.ingsis.grupo14'
 version = '1.0-SNAPSHOT'
 
 repositories {
@@ -11,6 +12,8 @@ repositories {
 
 dependencies {
     testImplementation 'org.jetbrains.kotlin:kotlin-test'
+    implementation project(':modules:common')
+
 }
 
 test {

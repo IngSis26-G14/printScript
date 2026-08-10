@@ -1,7 +1,7 @@
-package rules
+package lexer.rules
 
-import LexicalException
-import SourceCursor
+import lexer.LexicalException
+import lexer.SourceCursor
 import common.source.SourcePosition
 import common.source.SourceRange
 import common.token.Token

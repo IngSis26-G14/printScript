@@ -1,11 +1,13 @@
+package lexer
+
 import common.source.SourceRange
 import common.token.Token
 import common.token.TokenType
-import rules.LexerRule
-import rules.NumberRule
-import rules.StringRule
-import rules.SymbolRule
-import rules.WordRule
+import lexer.rules.LexerRule
+import lexer.rules.NumberRule
+import lexer.rules.StringRule
+import lexer.rules.SymbolRule
+import lexer.rules.WordRule
 import java.io.Reader
 
 class PrintScriptLexer internal constructor(
@@ -63,7 +65,7 @@ class PrintScriptLexer internal constructor(
         return LexicalException(
             message =
                 "Unexpected character '$character' at " +
-                    "line ${position.line}, column ${position.column}",
+                        "line ${position.line}, column ${position.column}",
             position = position,
         )
     }

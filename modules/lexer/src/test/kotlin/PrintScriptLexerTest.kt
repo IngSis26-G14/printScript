@@ -1,4 +1,5 @@
 import common.token.TokenType
+import lexer.PrintScriptLexer
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
