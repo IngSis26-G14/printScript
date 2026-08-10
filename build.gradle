@@ -26,6 +26,7 @@ kotlin {
 }
 
 kover {
+    //noinspection GroovyAssignabilityCheck
     reports{
         verify {
             rule {
