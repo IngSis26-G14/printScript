@@ -1,4 +1,4 @@
-import com.ingsis.g14.printscript.common.token.TokenType
+import common.token.TokenType
 import common.source.SourceRange
 import common.token.Token
 import java.io.Reader

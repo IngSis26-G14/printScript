@@ -1,4 +1,4 @@
-import com.ingsis.g14.printscript.common.token.TokenType
+import common.token.TokenType
 import org.junit.jupiter.api.Assertions.*
 
 import kotlin.test.Test
