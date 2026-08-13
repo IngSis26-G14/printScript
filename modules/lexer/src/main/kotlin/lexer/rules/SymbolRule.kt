@@ -1,11 +1,13 @@
 package lexer.rules
 
+import common.model.diagnostic.Diagnostic
+import common.model.span.Span
+import common.model.token.Token
+import common.model.token.TokenType
+import common.type.outcome.Outcome
 import lexer.SourceCursor
-import common.source.SourceRange
-import common.token.Token
-import common.token.TokenType
 
-internal class SymbolRule: LexerRule {
+internal class SymbolRule : LexerRule {
 
     private val symbols = mapOf(
         '(' to TokenType.LEFT_PARENTHESIS,
@@ -19,28 +21,20 @@ internal class SymbolRule: LexerRule {
         ':' to TokenType.COLON,
     )
 
-    override fun matches(cursor: SourceCursor): Boolean =
-        cursor.peek() in symbols
+    override fun matches(cursor: SourceCursor): Boolean = cursor.peek() in symbols
 
-
-
-    override fun read(cursor: SourceCursor): Token {
+    override fun read(cursor: SourceCursor): Outcome<Token, Diagnostic> {
         val start = cursor.currentPosition()
-        val symbol = checkNotNull(cursor.peek()){
-            "SymbolRule cannot read at EOF"
-        }
-        val type = checkNotNull(symbols[symbol]){
-            "SymbolRule cannot read at $symbol'"
-        }
+        val symbol = checkNotNull(cursor.peek()) { "SymbolRule cannot read at EOF" }
+        val type = checkNotNull(symbols[symbol]) { "SymbolRule cannot read '$symbol'" }
 
         cursor.advance()
 
-        return Token(
-            type = type,
-            lexeme = symbol.toString(),
-            range = SourceRange(
-                start = start,
-                end = cursor.currentPosition(),
+        return Outcome.Ok(
+            Token(
+                type = type,
+                lexeme = symbol.toString(),
+                span = Span(start, cursor.currentPosition()),
             ),
         )
     }

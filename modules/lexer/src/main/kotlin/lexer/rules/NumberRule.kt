@@ -1,19 +1,18 @@
 package lexer.rules
 
+import common.model.diagnostic.Diagnostic
+import common.model.span.Span
+import common.model.token.Token
+import common.model.token.TokenType
+import common.type.outcome.Outcome
 import lexer.SourceCursor
-import common.source.SourceRange
-import common.token.Token
-import common.token.TokenType
 
-internal class NumberRule: LexerRule {
+internal class NumberRule : LexerRule {
 
-    override fun matches(cursor: SourceCursor): Boolean =
-        cursor.peek()?.isDigit() == true
+    override fun matches(cursor: SourceCursor): Boolean = cursor.peek()?.isDigit() == true
 
-    override fun read(cursor: SourceCursor): Token {
-        check(matches(cursor)) {
-            "NumberRule must start at a digit"
-        }
+    override fun read(cursor: SourceCursor): Outcome<Token, Diagnostic> {
+        check(matches(cursor)) { "NumberRule must start at a digit" }
 
         val start = cursor.currentPosition()
 
@@ -22,10 +21,7 @@ internal class NumberRule: LexerRule {
                 append(cursor.advance())
             }
 
-            if (
-                cursor.peek() == '.' &&
-                cursor.peek(1)?.isDigit() == true
-            ) {
+            if (cursor.peek() == '.' && cursor.peek(1)?.isDigit() == true) {
                 append(cursor.advance())
 
                 while (cursor.peek()?.isDigit() == true) {
@@ -34,12 +30,11 @@ internal class NumberRule: LexerRule {
             }
         }
 
-        return Token(
-            type = TokenType.NUMBER_LITERAL,
-            lexeme = lexeme,
-            range = SourceRange(
-                start = start,
-                end = cursor.currentPosition()
+        return Outcome.Ok(
+            Token(
+                type = TokenType.NUMBER_LITERAL,
+                lexeme = lexeme,
+                span = Span(start, cursor.currentPosition()),
             ),
         )
     }

@@ -1,9 +1,11 @@
 package lexer.rules
 
+import common.model.diagnostic.Diagnostic
+import common.model.span.Span
+import common.model.token.Token
+import common.model.token.TokenType
+import common.type.outcome.Outcome
 import lexer.SourceCursor
-import common.source.SourceRange
-import common.token.Token
-import common.token.TokenType
 
 internal class WordRule : LexerRule {
 
@@ -14,32 +16,27 @@ internal class WordRule : LexerRule {
         "string" to TokenType.TYPE_STRING,
     )
 
-    override fun matches(cursor: SourceCursor): Boolean =
-        cursor.peek()?.isIdentifierStart() == true
+    override fun matches(cursor: SourceCursor): Boolean = cursor.peek()?.isIdentifierStart() == true
 
-    override fun read(cursor: SourceCursor): Token {
-        check(matches(cursor)) {
-            "WordRule must start at a letter or underscore"
-        }
+    override fun read(cursor: SourceCursor): Outcome<Token, Diagnostic> {
+        check(matches(cursor)) { "WordRule must start at a letter or underscore" }
 
         val start = cursor.currentPosition()
-
         val lexeme = buildString {
             while (cursor.peek()?.isIdentifierPart() == true) {
                 append(cursor.advance())
             }
         }
 
-        return Token(
-            type = reservedWords[lexeme] ?: TokenType.IDENTIFIER,
-            lexeme = lexeme,
-            range = SourceRange(start, cursor.currentPosition()),
+        return Outcome.Ok(
+            Token(
+                type = reservedWords[lexeme] ?: TokenType.IDENTIFIER,
+                lexeme = lexeme,
+                span = Span(start, cursor.currentPosition()),
+            ),
         )
     }
 
-    private fun Char.isIdentifierStart(): Boolean =
-        isLetter() || this == '_'
-
-    private fun Char.isIdentifierPart(): Boolean =
-        isLetterOrDigit() || this == '_'
+    private fun Char.isIdentifierStart(): Boolean = isLetter() || this == '_'
+    private fun Char.isIdentifierPart(): Boolean = isLetterOrDigit() || this == '_'
 }

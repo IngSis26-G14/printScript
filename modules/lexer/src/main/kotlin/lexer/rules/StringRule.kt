@@ -1,57 +1,52 @@
 package lexer.rules
 
-import lexer.LexicalException
+import common.model.diagnostic.Diagnostic
+import common.model.span.Position
+import common.model.span.Span
+import common.model.token.Token
+import common.model.token.TokenType
+import common.type.outcome.Outcome
 import lexer.SourceCursor
-import common.source.SourcePosition
-import common.source.SourceRange
-import common.token.Token
-import common.token.TokenType
+import lexer.categories.Lexical
+import lexer.error.LexError
 
-internal class StringRule: LexerRule {
+internal class StringRule : LexerRule {
 
+    override fun matches(cursor: SourceCursor): Boolean = cursor.peek() == '"' || cursor.peek() == '\''
 
-    override fun matches(cursor: SourceCursor): Boolean =
-        cursor.peek() == '"' || cursor.peek() == '\''
-
-    override fun read(cursor: SourceCursor): Token {
-        check(matches(cursor)){
-            "StringRule must start at a double quote"
-        }
+    override fun read(cursor: SourceCursor): Outcome<Token, Diagnostic> {
+        check(matches(cursor)) { "StringRule must start at a quote" }
 
         val start = cursor.currentPosition()
         val delimiter = checkNotNull(cursor.peek())
 
-        val lexeme = buildString {
-            append(cursor.advance()) // consume the opening double quote
+        val lexeme = StringBuilder()
+        lexeme.append(cursor.advance()) // consume la comilla de apertura
 
-            while(true){
-                val character = cursor.peek()
-                    ?: throw unterminatedString(start)
+        while (true) {
+            val character = cursor.peek() ?: return Outcome.Error(unterminatedString(start))
 
-                if(character == '\n') {
-                    throw unterminatedString(start)
-                }
-
-                append(cursor.advance())
-
-                if (character == delimiter){
-                    break
-                }
+            if (character == '\n') {
+                return Outcome.Error(unterminatedString(start))
             }
+            lexeme.append(cursor.advance())
+
+            if (character == delimiter) break
         }
-        return Token(
-            type = TokenType.STRING_LITERAL,
-            lexeme = lexeme,
-            range = SourceRange(
-                start = start,
-                end = cursor.currentPosition(),
+
+        return Outcome.Ok(
+            Token(
+                type = TokenType.STRING_LITERAL,
+                lexeme = lexeme.toString(),
+                span = Span(start, cursor.currentPosition()),
             ),
         )
     }
 
-    private fun unterminatedString(start: SourcePosition): LexicalException =
-        LexicalException(
-            message = "Unterminated string at line ${start.line}, " + "column ${start.column}",
-            position = start,
+    private fun unterminatedString(start: Position): LexError =
+        LexError(
+            message = "Unterminated string starting at line ${start.line}, column ${start.column}",
+            span = Span(start, start),
+            category = Lexical,
         )
 }
