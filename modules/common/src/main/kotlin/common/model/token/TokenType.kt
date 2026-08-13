@@ -1,4 +1,4 @@
-package common.token
+package common.model.token
 
 enum class TokenType {
 

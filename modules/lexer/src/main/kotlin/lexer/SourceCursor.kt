@@ -1,16 +1,11 @@
 package lexer
 
-import common.source.SourcePosition
-import java.io.Reader
+import common.model.span.Position
 import java.util.ArrayDeque
 
-internal class SourceCursor(
-    source: Reader,
-    ) {
-
-    private val reader = source.buffered()
-    private var lookahead = ArrayDeque<Char>()
-    private var reachedEnd = false
+internal class SourceCursor(source: Sequence<Char>) {
+    private val iterator = source.iterator()
+    private val lookahead = ArrayDeque<Char>()
 
     var offset: Int = 0
         private set
@@ -50,22 +45,16 @@ internal class SourceCursor(
         return character
     }
 
-    fun currentPosition(): SourcePosition =
-        SourcePosition(
+    fun currentPosition(): Position =
+        Position(
             line = line,
             column = column,
-            offset = offset
+            index = offset,
         )
 
     private fun fillLookahead(requiredSize: Int) {
-        while (lookahead.size < requiredSize && !reachedEnd) {
-            val next = reader.read()
-
-            if (next == -1) {
-                reachedEnd = true
-            } else {
-                lookahead.add(next.toChar())
-            }
+        while (lookahead.size < requiredSize && iterator.hasNext()) {
+            lookahead.add(iterator.next())
         }
     }
 }

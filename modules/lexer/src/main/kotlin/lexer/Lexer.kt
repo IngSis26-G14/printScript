@@ -1,9 +1,9 @@
 package lexer
 
-import common.token.Token
-import java.io.Reader
+import common.model.diagnostic.Diagnostic
+import common.model.token.Token
+import common.type.outcome.Outcome
 
 interface Lexer {
-
-    fun tokenize(source: Reader): Sequence<Token>
+    fun lex(version: String, chars: Sequence<Char>): Sequence<Outcome<Token, Diagnostic>>
 }
