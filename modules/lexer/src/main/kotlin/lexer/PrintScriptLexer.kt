@@ -1,90 +1,48 @@
 package lexer
 
-import common.source.SourceRange
-import common.token.Token
-import common.token.TokenType
-import lexer.rules.LexerRule
-import lexer.rules.NumberRule
-import lexer.rules.StringRule
-import lexer.rules.SymbolRule
-import lexer.rules.WordRule
-import java.io.Reader
+import common.model.diagnostic.Diagnostic
+import common.model.token.Token
+import common.type.outcome.Outcome
+import lexer.collector.TriviaCollector
+import lexer.categories.Lexical
+import lexer.error.ConfigurationError
+import lexer.error.LexError
+import lexer.scan.TokenScan
+import lexer.scanner.TokenScanner
+import lexer.table.RuleTableRegistry
+import common.type.option.Option
+import common.model.span.Span
 
-class PrintScriptLexer internal constructor(
-    private val rules: List<LexerRule>,
-    ) : Lexer {
+class PrintScriptLexer internal constructor(private val scanner: TokenScanner,
+                                            private val triviaCollector: TriviaCollector, ) : Lexer {
 
-    constructor() : this(
-        listOf(
-            StringRule(),
-            NumberRule(),
-            WordRule(),
-            SymbolRule(),
-        )
-    )
+    constructor() : this(TokenScanner(), TriviaCollector())
 
-
-    override fun tokenize(source: Reader): Sequence<Token> =
+    override fun lex(version: String, chars: Sequence<Char>): Sequence<Outcome<Token, Diagnostic>> =
         sequence {
-            val cursor = SourceCursor(source)
+            val table = when (val option = RuleTableRegistry.get(version)) {
+                is Option.Some -> option.value
+                is Option.None -> {
+                    yield(Outcome.Error(ConfigurationError("Unsupported PrintScript version: $version")))
+                    return@sequence
+                }
+            }
+
+            val cursor = SourceCursor(chars)
 
             while (!cursor.isAtEnd()) {
-                skipWhiteSpace(cursor)
+                val leading = triviaCollector.collect(cursor)
 
-                if (cursor.isAtEnd()) {
-                    break
+                if (cursor.isAtEnd()) break
+
+                when (val scan = scanner.scan(cursor, table)) {
+                    is TokenScan.Ok -> yield(Outcome.Ok(scan.token.copy(leading = leading)))
+                    is TokenScan.Error -> {
+                        yield(Outcome.Error(scan.diagnostic))
+                        return@sequence
+                    }
+                    is TokenScan.Empty -> return@sequence
                 }
-
-                val rule = rules.firstOrNull() { it.matches(cursor) }
-                    ?: throw unexpectedCharacter(cursor)
-
-                val previousOffset = cursor.offset
-                val token = rule.read(cursor)
-
-                check(cursor.offset > previousOffset) {
-                    "${rule::class.simpleName} returned a token " + "without consuming input"
-                }
-
-                yield(token)
             }
-            yield(createEndOfFileToken(cursor))
         }.constrainOnce()
-
-
-    private fun skipWhiteSpace(cursor: SourceCursor) {
-        while (cursor.peek()?.isWhitespace() == true) {
-            cursor.advance()
-        }
-    }
-
-    private fun unexpectedCharacter(cursor: SourceCursor,
-    ): LexicalException {
-        val position = cursor.currentPosition()
-        val character = cursor.peek()
-
-        return LexicalException(
-            message =
-                "Unexpected character '$character' at " +
-                        "line ${position.line}, column ${position.column}",
-            position = position,
-        )
-    }
-
-    private fun createEndOfFileToken(
-        cursor: SourceCursor,
-    ): Token {
-        val position = cursor.currentPosition()
-
-        return Token(
-            type = TokenType.EOF,
-            lexeme = "",
-            range = SourceRange(
-                start = position,
-                end = position,
-            ),
-        )
-    }
 }
-
-
-
