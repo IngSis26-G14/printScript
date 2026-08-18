@@ -1,5 +1,3 @@
-package parser
-
 import common.model.diagnostic.Diagnostic
 import common.model.node.Node
 import common.model.token.Token

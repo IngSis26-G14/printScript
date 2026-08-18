@@ -6,7 +6,6 @@ import common.model.token.Token
 import common.model.token.TokenType
 import common.type.outcome.Outcome
 import lexer.error.LexError
-
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -113,15 +112,30 @@ class PrintScriptLexerTest {
 
         assertEquals(
             listOf(
-                TokenType.LET, TokenType.IDENTIFIER, TokenType.COLON, TokenType.TYPE_STRING,
-                TokenType.ASSIGNMENT_OPERATOR, TokenType.STRING_LITERAL, TokenType.SEMICOLON,
+                TokenType.LET,
+                TokenType.IDENTIFIER,
+                TokenType.COLON,
+                TokenType.TYPE_STRING,
+                TokenType.ASSIGNMENT_OPERATOR,
+                TokenType.STRING_LITERAL,
+                TokenType.SEMICOLON,
 
-                TokenType.LET, TokenType.IDENTIFIER, TokenType.COLON, TokenType.TYPE_NUMBER,
-                TokenType.ASSIGNMENT_OPERATOR, TokenType.NUMBER_LITERAL, TokenType.ADDITION_OPERATOR,
-                TokenType.NUMBER_LITERAL, TokenType.SEMICOLON,
+                TokenType.LET,
+                TokenType.IDENTIFIER,
+                TokenType.COLON,
+                TokenType.TYPE_NUMBER,
+                TokenType.ASSIGNMENT_OPERATOR,
+                TokenType.NUMBER_LITERAL,
+                TokenType.ADDITION_OPERATOR,
+                TokenType.NUMBER_LITERAL,
+                TokenType.SEMICOLON,
 
-                TokenType.PRINTLN, TokenType.LEFT_PARENTHESIS, TokenType.IDENTIFIER,
-                TokenType.ADDITION_OPERATOR, TokenType.STRING_LITERAL, TokenType.RIGHT_PARENTHESIS,
+                TokenType.PRINTLN,
+                TokenType.LEFT_PARENTHESIS,
+                TokenType.IDENTIFIER,
+                TokenType.ADDITION_OPERATOR,
+                TokenType.STRING_LITERAL,
+                TokenType.RIGHT_PARENTHESIS,
                 TokenType.SEMICOLON,
             ),
             tokens.map { it.type },
