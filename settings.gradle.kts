@@ -9,5 +9,6 @@ include(
     "printscript-lexer",
     "printscript-parser",
     "printscript-api",
-    "printscript-interpreter"
+    "printscript-interpreter",
+    "printscript-validator"
 )
