@@ -166,7 +166,7 @@ internal class LetDeclarationStatement(
         tokens: List<Token>,
         table: GrammarTable,
     ): Outcome<Option<GrammarMatch>, GrammarFail> {
-        if (tokens.isEmpty() || tokens[0].type != TokenType.IDENTIFIER) {
+        if (tokens.isEmpty() || tokens[0].type != TokenType.ASSIGNMENT_OPERATOR) {
             return Outcome.Ok(Option.None)
         }
         val expr = table.dispatchExpression(tokens.drop(1)).getOrElse {
