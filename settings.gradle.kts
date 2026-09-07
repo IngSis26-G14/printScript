@@ -10,6 +10,7 @@ include(
     "printscript-parser",
     "printscript-api",
     "printscript-interpreter",
-    "printscript-validator"
-    "printscript-linter"
+    "printscript-validator",
+    "printscript-linter",
+    "printscript-cli"
 )
