@@ -4,12 +4,13 @@ enum class Operation {
     VALIDATION,
     EXECUTION,
     FORMATTING,
-    ANALYZING;
+    ANALYZING,
+    ;
 
     companion object {
         fun parse(value: String): Operation? =
             entries.firstOrNull {
-                it.name.equals(value, ignoreCase = true)
+                it.name.equals(value.trim(), ignoreCase = true)
             }
     }
 }

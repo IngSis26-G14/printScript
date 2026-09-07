@@ -28,7 +28,7 @@ internal class StatementExecutor(
         LetDeclarationStatementNode -> declare(node)
         AssignStatementNode -> assign(node)
         PrintlnStatementNode -> print(node)
-        else -> InterpreterDiagnostic("Unsupported statement '${node.type}'")
+        else -> InterpreterDiagnostic("Unsupported statement '${node.type}'", span = node.span)
     }
 
     private fun declare(node: Node): Diagnostic? {
@@ -37,7 +37,12 @@ internal class StatementExecutor(
         val typeIndex = children.indexOfFirst { it.type == NumberTypeNode || it.type == StringTypeNode }
         if (identifierIndex < 0 || typeIndex < 0) return malformed(node)
         val name = leafText(children[identifierIndex]) ?: return malformed(node)
-        if (symbols.find(name) != null) return InterpreterDiagnostic("Variable '$name' is already declared")
+        if (symbols.find(name) != null) {
+            return InterpreterDiagnostic(
+                "Variable '$name' is already declared",
+                span = children[identifierIndex].span,
+            )
+        }
 
         val declaredType = if (children[typeIndex].type == NumberTypeNode) NumberValueType else StringValueType
         val assignIndex = children.indexOfFirst { it.type == AssignNode }
@@ -53,6 +58,7 @@ internal class StatementExecutor(
         if (value != null && value.type != declaredType) {
             return InterpreterDiagnostic(
                 "Cannot initialize '$name' of type '${declaredType.name}' with '${value.type.name}'",
+                span = expressionSpan(children, assignIndex),
             )
         }
         symbols.declare(name, declaredType, value)
@@ -62,7 +68,11 @@ internal class StatementExecutor(
     private fun assign(node: Node): Diagnostic? {
         val children = children(node) ?: return malformed(node)
         val name = children.firstOrNull { it.type == IdentifierNode }?.let(::leafText) ?: return malformed(node)
-        val variable = symbols.find(name) ?: return InterpreterDiagnostic("Variable '$name' is not declared")
+        val identifier = children.firstOrNull { it.type == IdentifierNode } ?: return malformed(node)
+        val variable = symbols.find(name) ?: return InterpreterDiagnostic(
+            "Variable '$name' is not declared",
+            span = identifier.span,
+        )
         val assignIndex = children.indexOfFirst { it.type == AssignNode }
         val expression = children.getOrNull(assignIndex + 1) ?: return malformed(node)
         val value = when (val result = evaluator.evaluate(expression)) {
@@ -72,6 +82,7 @@ internal class StatementExecutor(
         if (value.type != variable.declaredType) {
             return InterpreterDiagnostic(
                 "Cannot assign '${value.type.name}' to '$name' of type '${variable.declaredType.name}'",
+                span = expression.span,
             )
         }
         symbols.assign(name, value)
@@ -104,5 +115,9 @@ internal class StatementExecutor(
 
     private fun leafText(node: Node): String? = ((node as? Node.Leaf)?.value as? StringValue)?.value
 
-    private fun malformed(node: Node) = InterpreterDiagnostic("Malformed '${node.type}' node")
+    private fun expressionSpan(children: List<Node>, assignIndex: Int) =
+        children.getOrNull(assignIndex + 1)?.span
+
+    private fun malformed(node: Node) =
+        InterpreterDiagnostic("Malformed '${node.type}' node", span = node.span)
 }

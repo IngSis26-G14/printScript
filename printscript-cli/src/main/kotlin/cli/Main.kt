@@ -1,5 +1,7 @@
 package cli
 
+import kotlin.system.exitProcess
+
 fun main(args: Array<String>) {
-    println(args.joinToString())
+    exitProcess(CliApplication().run(args))
 }

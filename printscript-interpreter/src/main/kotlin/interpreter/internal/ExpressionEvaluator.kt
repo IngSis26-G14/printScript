@@ -11,6 +11,7 @@ import common.model.node.ParenthesizedExpressionNode
 import common.model.node.PlusNode
 import common.model.node.StringLiteralNode
 import common.model.node.UnaryOperationNode
+import common.model.span.Span
 import common.model.value.FloatValue
 import common.model.value.IntegerValue
 import common.model.value.StringValue
@@ -26,7 +27,7 @@ internal class ExpressionEvaluator(private val symbols: SymbolTable) {
         ParenthesizedExpressionNode -> parenthesized(node)
         UnaryOperationNode -> unary(node)
         BinaryOperationExpressionNode -> binary(node)
-        else -> failure("Unsupported expression '${node.type}'")
+        else -> failure("Unsupported expression '${node.type}'", span = node.span)
     }
 
     private fun literal(node: Node): EvaluationResult {
@@ -48,9 +49,9 @@ internal class ExpressionEvaluator(private val symbols: SymbolTable) {
     private fun identifier(node: Node): EvaluationResult {
         val name = leafText(node) ?: return malformed(node)
         val variable = symbols.find(name)
-            ?: return failure("Variable '$name' is not declared")
+            ?: return failure("Variable '$name' is not declared", span = node.span)
         return variable.value?.let(EvaluationResult::Success)
-            ?: failure("Variable '$name' has not been initialized")
+            ?: failure("Variable '$name' has not been initialized", span = node.span)
     }
 
     private fun parenthesized(node: Node): EvaluationResult {
@@ -68,16 +69,16 @@ internal class ExpressionEvaluator(private val symbols: SymbolTable) {
         if (operand is EvaluationResult.Failure) return operand
         val value = (operand as EvaluationResult.Success).value
         return when (children[0].type) {
-            PlusNode -> numericUnary(value, 1)
-            MinusNode -> numericUnary(value, -1)
-            else -> failure("Unsupported unary operator")
+            PlusNode -> numericUnary(value, 1, children[1].span)
+            MinusNode -> numericUnary(value, -1, children[1].span)
+            else -> failure("Unsupported unary operator", span = children[0].span)
         }
     }
 
-    private fun numericUnary(value: Value, sign: Int): EvaluationResult = when (value) {
+    private fun numericUnary(value: Value, sign: Int, span: Span): EvaluationResult = when (value) {
         is IntegerValue -> EvaluationResult.Success(IntegerValue(value.value * sign))
         is FloatValue -> EvaluationResult.Success(FloatValue(value.value * sign))
-        else -> failure("Unary operators require a number, got '${value.type.name}'")
+        else -> failure("Unary operators require a number, got '${value.type.name}'", span = span)
     }
 
     private fun binary(node: Node): EvaluationResult {
@@ -101,14 +102,17 @@ internal class ExpressionEvaluator(private val symbols: SymbolTable) {
         val leftNumber = numberValue(left)
         val rightNumber = numberValue(right)
         if (leftNumber == null || rightNumber == null) {
-            return failure("Operator '${leafText(operator)}' requires numeric operands")
+            return failure(
+                "Operator '${leafText(operator)}' requires numeric operands",
+                span = operator.span,
+            )
         }
         if (operator.type == DivideNode && rightNumber == 0f) {
-            return failure("Division by zero", Runtime)
+            return failure("Division by zero", Runtime, operator.span)
         }
 
         val result = calculate(leftNumber, operator, rightNumber)
-            ?: return failure("Unsupported binary operator")
+            ?: return failure("Unsupported binary operator", span = operator.span)
         val bothIntegers = left is IntegerValue && right is IntegerValue
         val keepInteger = bothIntegers && operator.type != DivideNode
         return EvaluationResult.Success(if (keepInteger) IntegerValue(result.toInt()) else FloatValue(result))
@@ -131,10 +135,11 @@ internal class ExpressionEvaluator(private val symbols: SymbolTable) {
 
     private fun leafText(node: Node): String? = ((node as? Node.Leaf)?.value as? StringValue)?.value
 
-    private fun malformed(node: Node) = failure("Malformed '${node.type}' node")
+    private fun malformed(node: Node) = failure("Malformed '${node.type}' node", span = node.span)
 
     private fun failure(
         message: String,
         category: common.model.diagnostic.category.Category = interpreter.internal.diagnostic.Semantic,
-    ) = EvaluationResult.Failure(InterpreterDiagnostic(message, category))
+        span: Span? = null,
+    ) = EvaluationResult.Failure(InterpreterDiagnostic(message, category, span))
 }
