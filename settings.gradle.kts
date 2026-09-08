@@ -12,5 +12,6 @@ include(
     "printscript-interpreter",
     "printscript-validator",
     "printscript-linter",
-    "printscript-formatter"
+    "printscript-formatter",
+    "printscript-cli"
 )
