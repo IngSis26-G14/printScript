@@ -194,9 +194,12 @@ val publishedProjects = listOf(
     ":printscript-interpreter"
 )
 
+val packageVersion = providers.environmentVariable("PACKAGE_VERSION")
+    .orElse("1.0-SNAPSHOT")
+
 configure(publishedProjects.map(::project)) {
     group = "com.github.ingsis26g14"
-    version = "1.0"
+    version = packageVersion.get()
 
     apply(plugin = "maven-publish")
 
