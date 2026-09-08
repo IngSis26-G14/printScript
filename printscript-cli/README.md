@@ -21,9 +21,9 @@ printscript <operation> <source> [options]
 Examples:
 
 ```shell
-printscript validation program.ps --version 1.0
-printscript execution program.ps -v 1.0
-printscript analyzing program.ps --config lint.json
+printscript validation examples/program.ps --version 1.0
+printscript execution examples/program.ps -v 1.0
+printscript analyzing examples/program.ps --config examples/lint.json
 ```
 
 The version defaults to `1.0`. Versions `1.0` and `1.1` can be selected from
