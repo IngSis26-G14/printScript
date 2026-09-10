@@ -1,7 +1,6 @@
-@file:Suppress("ktlint:standard:filename")
-
 package parser.internal.table
 
+import common.model.node.BooleanTypeNode
 import common.model.node.DivideNode
 import common.model.node.MinusNode
 import common.model.node.MultiplyNode
@@ -10,7 +9,11 @@ import common.model.node.PlusNode
 import common.model.node.StringTypeNode
 import common.model.token.TokenType
 import parser.internal.model.grammar.expression.BinaryOperationExpression
+import parser.internal.model.grammar.expression.BlockExpression
 import parser.internal.model.grammar.expression.Expression
+import parser.internal.model.grammar.expression.ReadEnvPrimary
+import parser.internal.model.grammar.expression.ReadInputPrimary
+import parser.internal.model.grammar.primary.BooleanLiteralPrimary
 import parser.internal.model.grammar.primary.IdentifierPrimary
 import parser.internal.model.grammar.primary.NumberLiteralPrimary
 import parser.internal.model.grammar.primary.ParenthesizedPrimary
@@ -18,6 +21,8 @@ import parser.internal.model.grammar.primary.Primary
 import parser.internal.model.grammar.primary.StringLiteralPrimary
 import parser.internal.model.grammar.primary.UnaryOperationPrimary
 import parser.internal.model.grammar.statement.AssignStatement
+import parser.internal.model.grammar.statement.ConstDeclarationStatement
+import parser.internal.model.grammar.statement.IfStatement
 import parser.internal.model.grammar.statement.LetDeclarationStatement
 import parser.internal.model.grammar.statement.PrintlnStatement
 import parser.internal.model.grammar.statement.Statement
@@ -57,5 +62,37 @@ internal object PrintScriptV10 : GrammarTable {
                 TokenType.ADDITION_OPERATOR to BinaryOperator(PlusNode, 1),
             ),
         ),
+    )
+}
+
+internal object PrintScriptV11 : GrammarTable {
+    override val statements: Collection<Statement> = listOf(
+        AssignStatement(),
+        ConstDeclarationStatement(
+            mapOf(
+                TokenType.TYPE_BOOLEAN to BooleanTypeNode,
+                TokenType.TYPE_NUMBER to NumberTypeNode,
+                TokenType.TYPE_STRING to StringTypeNode,
+            ),
+        ),
+        IfStatement(),
+        LetDeclarationStatement(
+            mapOf(
+                TokenType.TYPE_BOOLEAN to BooleanTypeNode,
+                TokenType.TYPE_NUMBER to NumberTypeNode,
+                TokenType.TYPE_STRING to StringTypeNode,
+            ),
+        ),
+        PrintlnStatement(),
+    )
+
+    override val primaries: Collection<Primary> = PrintScriptV10.primaries + listOf(
+        BooleanLiteralPrimary(),
+        ReadEnvPrimary(),
+        ReadInputPrimary(),
+    )
+
+    override val expressions: Collection<Expression> = PrintScriptV10.expressions + listOf(
+        BlockExpression(),
     )
 }

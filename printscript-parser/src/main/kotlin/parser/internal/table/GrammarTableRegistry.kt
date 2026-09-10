@@ -5,6 +5,7 @@ import common.type.option.Option
 internal object GrammarTableRegistry {
     private val tables: Map<String, Lazy<GrammarTable>> = mapOf(
         "1.0" to lazy { PrintScriptV10 },
+        "1.1" to lazy { PrintScriptV11 },
     )
 
     fun get(version: String): Option<GrammarTable> {
