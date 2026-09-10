@@ -41,3 +41,45 @@ spotless {
         trimTrailingWhitespace()
     }
 }
+
+pluginManager.withPlugin("org.jetbrains.kotlin.jvm") {
+    apply(plugin = "maven-publish")
+
+    val envFile = rootProject.file(".env")
+    val envVars: Map<String, String> = if (envFile.exists()) {
+        envFile.readLines()
+            .filter { it.isNotBlank() && !it.startsWith("#") }
+            .mapNotNull { line ->
+                val idx = line.indexOf('=')
+                if (idx <= 0) null
+                else line.substring(0, idx).trim() to line.substring(idx + 1).trim()
+            }
+            .toMap()
+    } else {
+        emptyMap()
+    }
+
+    fun credential(key: String): String? =
+        envVars[key] ?: System.getenv(key)
+
+    extensions.configure<PublishingExtension> {
+        publications {
+            create<MavenPublication>("printScript") {
+                from(components["java"])
+                artifactId = project.name
+            }
+        }
+
+        repositories {
+            maven {
+                name = "GitHubPackages"
+                url = uri("https://maven.pkg.github.com/IngSis26-G14/printScript")
+
+                credentials {
+                    username = credential("GITHUB_ACTOR")
+                    password = credential("GITHUB_TOKEN")
+                }
+            }
+        }
+    }
+}

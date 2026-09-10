@@ -3,6 +3,12 @@ name: Publish
 on:
   release:
     types: [created]
+  workflow_dispatch:
+    inputs:
+      module:
+        description: 'Módulo a publicar'
+        required: false
+        default: 'printscript-parser'
 
 permissions:
   contents: read
@@ -11,7 +17,6 @@ permissions:
 jobs:
   publish:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
 
@@ -24,8 +29,9 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Publish
-        run: ./gradlew publish
+      - name: Publish single module
+        run: ./gradlew :${{ github.event.inputs.module || 'shared' }}:publish
         env:
           GITHUB_ACTOR: ${{ github.actor }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
