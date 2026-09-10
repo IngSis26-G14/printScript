@@ -87,7 +87,7 @@ class CliApplicationTest {
         val result = runCli("validation", source.toString(), "--version", "1.1")
 
         assertEquals(1, result.exitCode)
-        assertContains(result.error, "Unsupported language version '1.1'")
+        assertContains(result.error, "Unsupported PrintScript version: 1.1")
     }
 
     @Test

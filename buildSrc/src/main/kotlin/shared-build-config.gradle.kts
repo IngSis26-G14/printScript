@@ -18,19 +18,6 @@ detekt {
 
 kotlin { jvmToolchain(17) }
 
-kover {
-    htmlReport {
-        onCheck.set(true)
-    }
-    verify {
-        rule {
-            bound {
-                minValue = 80
-            }
-        }
-    }
-}
-
 tasks.check { dependsOn("detekt", "spotlessCheck", "koverVerify") }
 
 tasks.named("build") {

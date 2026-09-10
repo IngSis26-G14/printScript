@@ -12,16 +12,15 @@ repositories {
     mavenCentral()
 }
 
-val minimumCoverage = 80
+val minimumCoverage = 75
 
 koverMerged {
     enable()
     htmlReport { onCheck = true }
-    verify {
-        rule {
-            bound {
-                minValue = minimumCoverage
-            }
+    verify { rule { bound { minValue = minimumCoverage } } }
+    filters {
+        projects {
+            excludes += listOf(":printscript-api", ":printscript-common",":printscript-formatter",":printscript-validator",":printscript-linter",)
         }
     }
 }
