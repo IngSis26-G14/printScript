@@ -14,6 +14,63 @@ import kotlin.test.assertTrue
 
 class CliApplicationTest {
     @Test
+    fun `formatted version 1_1 source validates and preserves execution`() {
+        val source = sourceFile(
+            "const enabled:boolean=readEnv('ENABLED');let n:number=readInput('number');" +
+                "if(enabled){n=n*2;println(n);}else{println('disabled');}",
+        )
+        val config = configFile("{}")
+        val formatted = runCli("formatting", source.toString(), "-v", "1.1", "--config", config.toString())
+        assertEquals(0, formatted.exitCode, formatted.error)
+        val formattedSource = sourceFile(formatted.output)
+        val validation = runCli("validation", formattedSource.toString(), "-v", "1.1")
+        assertEquals(0, validation.exitCode, validation.error)
+        for ((flag, expected) in listOf("true" to "number\n6\n", "false" to "number\ndisabled\n")) {
+            for (path in listOf(source, formattedSource)) {
+                val execution = runCli(
+                    "execution",
+                    path.toString(),
+                    "-v",
+                    "1.1",
+                    input = "3\n",
+                    environment = mapOf("ENABLED" to flag),
+                )
+                assertEquals(0, execution.exitCode, execution.error)
+                assertEquals(expected, execution.output)
+            }
+        }
+    }
+
+    @Test
+    fun `analysis checks readInput and println in nested branches without reading input`() {
+        val source = sourceFile(
+            "let enabled: boolean = true; if (enabled) { if (enabled) {" +
+                "let n: number = readInput('enter ' + 'number'); println(n + 1); } }",
+        )
+        val config = configFile(
+            """{"mandatory-variable-or-literal-in-readInput":true,"mandatory-variable-or-literal-in-println":true}""",
+        )
+        val result = runCli("analyzing", source.toString(), "-v", "1.1", "--config", config.toString())
+        assertEquals(1, result.exitCode)
+        assertContains(result.error, "readInput() must take")
+        assertContains(result.error, "println() must take")
+        assertEquals("", result.output)
+        val disabled = configFile(
+            """{"mandatory-variable-or-literal-in-readInput":false,"mandatory-variable-or-literal-in-println":false}""",
+        )
+        val accepted = runCli("analyzing", source.toString(), "-v", "1.1", "--config", disabled.toString())
+        assertEquals(0, accepted.exitCode, accepted.error)
+    }
+
+    @Test
+    fun `executes a large file completely through the CLI`() {
+        val source = sourceFile("let n: number = 0;\n" + "n = n + 1;\n".repeat(10000) + "println(n);")
+        val result = runCli("execution", source.toString())
+        assertEquals(0, result.exitCode, result.error)
+        assertEquals("10000\n", result.output)
+    }
+
+    @Test
     fun `validates a source file and reports parsing progress`() {
         val source = sourceFile("let value: number = 1;")
         val result = runCli("validation", source.toString())

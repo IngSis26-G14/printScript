@@ -1,14 +1,16 @@
 #!/bin/sh
 
-set -e
+set -eu
+
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+repo_root=$(git -C "$script_dir" rev-parse --show-toplevel)
 
 echo "Installing Git hooks..."
 
-git config core.hooksPath .githooks
-
-chmod +x .githooks/pre-commit
+chmod +x "$repo_root/.githooks/pre-commit"
+git -C "$repo_root" config --local core.hooksPath .githooks
 
 echo "Git hooks installed successfully."
 echo "Pre-commit hook: .githooks/pre-commit"
 
-#Para instalar el pre-commit corre este comando:  ./scripts/install-hooks.sh
+# Run from any directory: /bin/sh /path/to/printScript/scripts/install-hooks.sh
