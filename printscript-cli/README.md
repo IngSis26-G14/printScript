@@ -27,8 +27,8 @@ printscript analyzing examples/program.ps --config examples/lint.json
 ```
 
 The version defaults to `1.0`. Versions `1.0` and `1.1` can be selected from
-the terminal, although the lexer, parser, and interpreter still need language
-support for `1.1` before that version can process programs.
+the terminal. The lexer, parser, and interpreter support both versions. Version 1.1
+execution supports booleans, constants, conditionals, `readInput`, and `readEnv`.
 
 Analysis configuration is a JSON object containing string, boolean, or integer
 rule values:

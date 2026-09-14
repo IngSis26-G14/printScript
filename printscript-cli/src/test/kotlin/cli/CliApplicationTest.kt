@@ -83,11 +83,19 @@ class CliApplicationTest {
 
     @Test
     fun `passes selected version 1_1 to the language pipeline`() {
-        val source = sourceFile("println(1);")
+        val source = sourceFile("const enabled: boolean = true; if (enabled) { println(readEnv('NAME')); }")
         val result = runCli("validation", source.toString(), "--version", "1.1")
 
+        assertEquals(0, result.exitCode)
+        assertContains(result.error, "100%")
+    }
+
+    @Test
+    fun `rejects version 1_1 syntax when version 1_0 is selected`() {
+        val source = sourceFile("const enabled: boolean = true;")
+        val result = runCli("validation", source.toString(), "--version", "1.0")
+
         assertEquals(1, result.exitCode)
-        assertContains(result.error, "Unsupported PrintScript version: 1.1")
     }
 
     @Test
@@ -100,14 +108,36 @@ class CliApplicationTest {
         assertContains(result.error, "no formatter implementation")
     }
 
-    private fun runCli(vararg arguments: String): CliResult {
+    @Test
+    fun `executes version 1_1 with standard input and environment`() {
+        val source = sourceFile(
+            "const flag: boolean = true; let n: number = readInput('Number'); " +
+                "if (flag) { println(n); println(readEnv('NAME')); }",
+        )
+        val result = runCli(
+            "execution",
+            source.toString(),
+            "--version",
+            "1.1",
+            input = "12\n",
+            environment = mapOf("NAME" to "Ada"),
+        )
+        assertEquals(0, result.exitCode, result.error)
+        assertEquals("Number\n12\nAda\n", result.output)
+    }
+
+    private fun runCli(
+        vararg arguments: String,
+        input: String = "",
+        environment: Map<String, String> = emptyMap(),
+    ): CliResult {
         val outputBytes = ByteArrayOutputStream()
         val errorBytes = ByteArrayOutputStream()
         val application = CliApplication(
             standardOutput = PrintStream(outputBytes),
             standardError = PrintStream(errorBytes),
-            standardInput = BufferedReader(StringReader("")),
-            environment = emptyMap(),
+            standardInput = BufferedReader(StringReader(input)),
+            environment = environment,
         )
 
         val exitCode = application.run(arrayOf(*arguments))

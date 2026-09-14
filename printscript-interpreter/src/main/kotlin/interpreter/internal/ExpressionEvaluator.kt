@@ -1,6 +1,7 @@
 package interpreter.internal
 
 import common.model.node.BinaryOperationExpressionNode
+import common.model.node.BooleanLiteralNode
 import common.model.node.DivideNode
 import common.model.node.IdentifierNode
 import common.model.node.MinusNode
@@ -9,6 +10,8 @@ import common.model.node.Node
 import common.model.node.NumberLiteralNode
 import common.model.node.ParenthesizedExpressionNode
 import common.model.node.PlusNode
+import common.model.node.ReadEnvExpressionNode
+import common.model.node.ReadInputExpressionNode
 import common.model.node.StringLiteralNode
 import common.model.node.UnaryOperationNode
 import common.model.span.Span
@@ -16,18 +19,35 @@ import common.model.value.FloatValue
 import common.model.value.IntegerValue
 import common.model.value.StringValue
 import common.model.value.Value
+import common.model.value.type.NumberValueType
+import common.model.value.type.StringValueType
+import common.model.value.type.ValueType
 import interpreter.internal.diagnostic.InterpreterDiagnostic
 import interpreter.internal.diagnostic.Runtime
 
-internal class ExpressionEvaluator(private val symbols: SymbolTable) {
-    fun evaluate(node: Node): EvaluationResult = when (node.type) {
-        NumberLiteralNode -> literal(node)
+internal class ExpressionEvaluator(
+    private val symbols: SymbolTable,
+    private val reader: RuntimeReader,
+) {
+    fun evaluate(node: Node, expectedType: ValueType = StringValueType): EvaluationResult = when (node.type) {
+        NumberLiteralNode, BooleanLiteralNode -> literal(node)
         StringLiteralNode -> stringLiteral(node)
         IdentifierNode -> identifier(node)
-        ParenthesizedExpressionNode -> parenthesized(node)
+        ParenthesizedExpressionNode -> parenthesized(node, expectedType)
         UnaryOperationNode -> unary(node)
-        BinaryOperationExpressionNode -> binary(node)
+        BinaryOperationExpressionNode -> binary(node, expectedType)
+        ReadInputExpressionNode, ReadEnvExpressionNode -> read(node, expectedType)
         else -> failure("Unsupported expression '${node.type}'", span = node.span)
+    }
+
+    private fun read(node: Node, expectedType: ValueType): EvaluationResult {
+        val children = (node as? Node.Composite)?.children?.toList() ?: return malformed(node)
+        val argument = children.getOrNull(2) ?: return malformed(node)
+        val result = evaluate(argument, StringValueType)
+        if (result is EvaluationResult.Failure) return result
+        val value = (result as EvaluationResult.Success).value
+        if (value !is StringValue) return failure("Read argument must be a string", span = argument.span)
+        return reader.read(node, value.value, expectedType)
     }
 
     private fun literal(node: Node): EvaluationResult {
@@ -54,18 +74,18 @@ internal class ExpressionEvaluator(private val symbols: SymbolTable) {
             ?: failure("Variable '$name' has not been initialized", span = node.span)
     }
 
-    private fun parenthesized(node: Node): EvaluationResult {
+    private fun parenthesized(node: Node, expectedType: ValueType): EvaluationResult {
         val composite = node as? Node.Composite ?: return malformed(node)
         val inner = composite.children.firstOrNull {
             it.type != common.model.node.LeftParenthesisNode && it.type != common.model.node.RightParenthesisNode
         } ?: return malformed(node)
-        return evaluate(inner)
+        return evaluate(inner, expectedType)
     }
 
     private fun unary(node: Node): EvaluationResult {
         val children = (node as? Node.Composite)?.children?.toList() ?: return malformed(node)
         if (children.size != 2) return malformed(node)
-        val operand = evaluate(children[1])
+        val operand = evaluate(children[1], NumberValueType)
         if (operand is EvaluationResult.Failure) return operand
         val value = (operand as EvaluationResult.Success).value
         return when (children[0].type) {
@@ -81,12 +101,13 @@ internal class ExpressionEvaluator(private val symbols: SymbolTable) {
         else -> failure("Unary operators require a number, got '${value.type.name}'", span = span)
     }
 
-    private fun binary(node: Node): EvaluationResult {
+    private fun binary(node: Node, expectedType: ValueType): EvaluationResult {
         val children = (node as? Node.Composite)?.children?.toList() ?: return malformed(node)
         if (children.size != 3) return malformed(node)
-        val left = evaluate(children[0])
+        val operandType = if (children[1].type == PlusNode) expectedType else NumberValueType
+        val left = evaluate(children[0], operandType)
         if (left is EvaluationResult.Failure) return left
-        val right = evaluate(children[2])
+        val right = evaluate(children[2], operandType)
         if (right is EvaluationResult.Failure) return right
         return applyBinary(
             (left as EvaluationResult.Success).value,
