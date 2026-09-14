@@ -1,11 +1,12 @@
 package parser.internal.table
 
-import common.model.token.Token
 import common.type.option.Option
 import common.type.option.getOrElse
 import common.type.option.map
 import common.type.option.maxBy
 import common.type.outcome.Outcome
+import parser.internal.buffer.TokenCursor
+import parser.internal.buffer.getOrElse
 import parser.internal.model.category.InvalidExpression
 import parser.internal.model.category.InvalidStatement
 import parser.internal.model.category.MissingExpression
@@ -23,7 +24,7 @@ internal interface GrammarTable {
     val expressions: Collection<Expression>
     val primaries: Collection<Primary>
 
-    fun dispatchStatement(tokens: List<Token>): Outcome<GrammarMatch, GrammarFail> {
+    fun dispatchStatement(tokens: TokenCursor): Outcome<GrammarMatch, GrammarFail> {
         return when (val result = dispatch(tokens, statements)) {
             is Outcome.Ok -> result
             is Outcome.Error -> {
@@ -50,7 +51,7 @@ internal interface GrammarTable {
         }
     }
 
-    fun dispatchExpression(tokens: List<Token>): Outcome<GrammarMatch, GrammarFail> {
+    fun dispatchExpression(tokens: TokenCursor): Outcome<GrammarMatch, GrammarFail> {
         return when (val result = dispatch(tokens, expressions)) {
             is Outcome.Ok -> result
             is Outcome.Error -> {
@@ -77,7 +78,7 @@ internal interface GrammarTable {
         }
     }
 
-    fun dispatchPrimary(tokens: List<Token>): Outcome<GrammarMatch, GrammarFail> {
+    fun dispatchPrimary(tokens: TokenCursor): Outcome<GrammarMatch, GrammarFail> {
         return when (val result = dispatch(tokens, primaries)) {
             is Outcome.Ok -> result
             is Outcome.Error -> {
@@ -105,7 +106,7 @@ internal interface GrammarTable {
     }
 
     private fun dispatch(
-        tokens: List<Token>,
+        tokens: TokenCursor,
         grammars: Collection<Grammar>,
     ): Outcome<GrammarMatch, GrammarFail> {
         var bestMatch: Option<GrammarMatch> = Option.None

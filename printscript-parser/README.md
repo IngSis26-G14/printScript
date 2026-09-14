@@ -109,10 +109,9 @@ PrintScriptParser.parse(version, tokens)
         ├─ 1. GrammarTableRegistry.get(version)  →  Option<GrammarTable>
         │       (si la versión no existe: Outcome.Error(ConfigurationError))
         │
-        └─ 2. TokenBuffer(tokens)  +  NodeScanner
+        └─ 2. TokenBuffer(tokens)
                 loop mientras haya tokens:
-                    scanner.scan(buffer, table)  →  NodeScan
-                        ├─ Empty  → no quedan tokens, terminar
+                    table.dispatchStatement(buffer)
                         ├─ Error  → yield Outcome.Error(ParseError), terminar
                         └─ Ok     → yield Outcome.Ok(node), buffer.advance(consumidos)
 ```
@@ -120,35 +119,30 @@ PrintScriptParser.parse(version, tokens)
 ### `TokenBuffer` — la ventana deslizante sobre la secuencia
 
 ```kotlin
-internal class TokenBuffer(tokens: Sequence<Token>) {
-    private val inner = ArrayDeque<Token>()   // hasta 64 tokens de lookahead
-    fun peek(n: Int = 1): Collection<Token>
-    fun advance(n: Int = 1)
-    fun hasNext(n: Int = 1): Boolean
+internal interface TokenCursor {
+    fun tokenAt(index: Int = 0): Token?
+    fun drop(count: Int): TokenCursor
+}
+
+internal class TokenBuffer(tokens: Sequence<Token>) : TokenCursor {
+    fun advance(count: Int)
 }
 ```
 
-Es el mecanismo que permite que el parser sea streaming: mantiene un buffer
-acotado (64 tokens de lookahead) en vez de materializar toda la secuencia.
-`peek(n)` mira los próximos `n` tokens sin consumirlos, `advance(n)` los
-descarta y rellena el buffer con más tokens de la fuente original.
+`TokenBuffer` consume la secuencia de entrada bajo demanda. `tokenAt(n)` carga
+solo hasta el índice solicitado; `drop(n)` crea una vista desplazada que comparte
+el mismo almacenamiento, sin copiar tokens. Las gramáticas usan esas vistas para
+delegar expresiones y bloques anidados.
 
-### `NodeScanner` — probar de a un token más hasta encontrar el mejor match
+No existe un límite fijo de lookahead. Una sentencia puede superar 64 tokens y
+seguir siendo válida. Cuando se produce el nodo de nivel superior, `advance`
+descarta sus tokens antes de continuar. Por eso un archivo con muchas sentencias
+no se materializa completo: se retienen la sentencia actual y el pequeño
+lookahead que sus reglas hayan solicitado.
 
-El scanner no sabe nada de gramática específica; su trabajo es genérico:
-
-1. Prueba `table.dispatchStatement(slice)` con `slice` = 1 token.
-2. Si matchea, guarda ese resultado como candidato y **agranda el slice** para
-   ver si con un token más el match consume incluso más (longest match wins).
-3. Si falla, guarda el mejor error visto y también agranda el slice (una
-   sentencia inválida puede necesitar más tokens para determinar el mensaje de
-   error más preciso).
-4. Se detiene cuando agrandar el slice deja de mejorar el resultado, y devuelve
-   el mejor nodo encontrado o, si no hubo ninguno, el mejor error.
-
-Este diseño ("longest match", probando tamaños de slice crecientes) es lo que
-le permite al parser no tener que saber de antemano cuántos tokens ocupa cada
-sentencia — se lo pregunta a la gramática.
+El AST de un único bloque grande sí conserva todos los nodos de ese bloque. Esto
+es parte del modelo actual de `BlockNode`; no implica conservar el resto del
+archivo.
 
 ## 4. La gramática: `GrammarTable` y las piezas que la componen
 
@@ -157,12 +151,12 @@ sentencia — se lo pregunta a la gramática.
 ```kotlin
 internal interface Grammar {
     val type: NodeType
-    fun match(tokens: List<Token>, table: GrammarTable): Outcome<GrammarMatch, GrammarFail>
+    fun match(tokens: TokenCursor, table: GrammarTable): Outcome<GrammarMatch, GrammarFail>
 }
 ```
 
 Cada regla gramatical (cada `Statement`, `Primary` o `Expression`) es una clase
-chica que implementa `Grammar.match`: recibe una lista de tokens candidatos y
+chica que implementa `Grammar.match`: recibe un cursor lazy y
 devuelve o bien un `GrammarMatch(node, consumidos)` o un `GrammarFail(mensaje,
 categoría, consumidos)`.
 
@@ -182,7 +176,7 @@ internal interface GrammarTable {
     val expressions: Collection<Expression>
     val primaries: Collection<Primary>
 
-    fun dispatchStatement(tokens: List<Token>): Outcome<GrammarMatch, GrammarFail>
+    fun dispatchStatement(tokens: TokenCursor): Outcome<GrammarMatch, GrammarFail>
     // dispatchExpression, dispatchPrimary: misma idea
 }
 ```
@@ -265,11 +259,11 @@ punto del archivo.
 Para `let x: number = 5;`:
 
 1. `GrammarTableRegistry.get("1.0")` → `PrintScriptV10`.
-2. `TokenBuffer` arranca con los tokens `[Let, Identifier(x), Colon,
-   NumberType, Assign, NumberLiteral(5), Semicolon, ...]`.
-3. `NodeScanner.scan` prueba `dispatchStatement` con slices crecientes.
-   `LetDeclarationStatement.match` es la única que matchea, y consume los 7
-   tokens de la sentencia completa.
+2. `TokenBuffer` empieza vacío y carga tokens cuando una regla llama a
+   `tokenAt`.
+3. `dispatchStatement` prueba las gramáticas sobre vistas del mismo cursor.
+   `LetDeclarationStatement.match` es la única que matchea y consume los 7
+   tokens de la sentencia completa, sin volver a parsear slices crecientes.
 4. Se produce `Outcome.Ok(Node.Composite(LetDeclarationStatementNode, [...],
    span))`, con hijos que incluyen el `Leaf` del identificador y el resultado
    de parsear la expresión `5` (vía `dispatchExpression` → `dispatchPrimary` →
@@ -281,7 +275,7 @@ Si en cambio el código fuera `let x: number = 5` (sin `;`):
 1. `LetDeclarationStatement.match` llega hasta el final esperando un
    `SemicolonToken` y no lo encuentra.
 2. Devuelve `Outcome.Error(GrammarFail("Expected ';'", MissingEndOfLine, 6))`.
-3. Como no hay más tokens que probar, el scanner devuelve ese error.
+3. `dispatchStatement` devuelve ese error al parser.
 4. `buildParseError` no encuentra un token en la posición 6 (no hay más
    tokens), así que arma un `Span` puntual en el final del último token válido
    (el `5`) — indicando exactamente dónde falta el `;`.
@@ -308,3 +302,20 @@ Si en cambio el código fuera `let x: number = 5` (sin `;`):
 - No valida estilo/convenciones (eso es `printscript-linter`).
 - No tokeniza el archivo fuente (eso es `printscript-lexer` — este módulo
   recibe `Sequence<Token>` ya armada).
+
+## Condicionales en PrintScript 1.1
+
+La gramática acepta `if (identificador) { ... }` y un `else { ... }` opcional.
+`IfStatement` usa `IdentifierPrimary` para la condición y `BlockExpression` para
+cada rama. No acepta literales, llamadas ni operaciones como condición, cuerpos
+sin llaves ni `else if`. Para anidar otro condicional se escribe
+`else { if (otroIdentificador) { ... } }`.
+
+El parser verifica la forma de la condición; `IfStatementVisitor` en el validator
+comprueba que el identificador exista y tenga tipo boolean. Una variable boolean
+inicializada mediante `readInput` o `readEnv` también es válida: su valor se conoce
+en ejecución, pero su tipo ya está declarado.
+
+`ConditionalGrammarTest` cubre estas restricciones desde texto fuente, incluidos
+los diagnósticos y sus posiciones. Las pruebas del CLI verifican los tipos de las
+variables utilizadas como condición.

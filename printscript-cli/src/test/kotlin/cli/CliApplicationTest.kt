@@ -126,6 +126,33 @@ class CliApplicationTest {
         assertEquals("Number\n12\nAda\n", result.output)
     }
 
+    @Test
+    fun `conditional validation requires a declared boolean variable`() {
+        val invalidPrograms = listOf(
+            "let flag: number = 1; if (flag) {}",
+            "let flag: string = 'true'; if (flag) {}",
+            "let flag: number = readInput('number'); if (flag) {}",
+            "let flag: boolean; if (flag) {}",
+            "if (missing) {}",
+            "if (true) {}",
+            "if (readInput('flag')) {}",
+        )
+        for (program in invalidPrograms) {
+            val result = runCli("validation", sourceFile(program).toString(), "--version", "1.1")
+            assertEquals(1, result.exitCode, program)
+            assertTrue(Regex("\\d+:\\d+-\\d+:\\d+").containsMatchIn(result.error), result.error)
+        }
+    }
+
+    @Test
+    fun `conditional validation accepts boolean variables from runtime reads`() {
+        for (initializer in listOf("true", "readInput('flag')", "readEnv('FLAG')")) {
+            val program = "let flag: boolean = $initializer; if (flag) {} else { if (flag) {} }"
+            val result = runCli("validation", sourceFile(program).toString(), "--version", "1.1")
+            assertEquals(0, result.exitCode, result.error)
+        }
+    }
+
     private fun runCli(
         vararg arguments: String,
         input: String = "",

@@ -24,6 +24,12 @@ class ConsoleOutputWriter(
     }
 }
 
+class FormattedOutputWriter(private val output: PrintStream) : OutputWriter {
+    override fun write(input: Sequence<String>) {
+        input.forEach(output::print)
+    }
+}
+
 class SystemEnvReader(
     private val environment: Map<String, String> = System.getenv(),
 ) : EnvReader {

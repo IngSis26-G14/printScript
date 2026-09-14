@@ -8,4 +8,5 @@ version = "1.0-SNAPSHOT"
 dependencies {
     implementation(project(":printscript-common"))
     implementation(project(":printscript-api"))
+    testImplementation(project(":printscript-lexer"))
 }

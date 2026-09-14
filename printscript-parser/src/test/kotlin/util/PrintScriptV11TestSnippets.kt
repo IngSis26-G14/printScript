@@ -94,7 +94,7 @@ object PrintScriptV11TestSnippets {
             listOf(
                 Token(TokenType.IF, "if", Span(Position(1, 1, 0), Position(1, 3, 2))),
                 Token(TokenType.LEFT_PARENTHESIS, "(", Span(Position(1, 3, 2), Position(1, 4, 3))),
-                Token(TokenType.BOOLEAN_LITERAL, "true", Span(Position(1, 4, 3), Position(1, 8, 7))),
+                Token(TokenType.IDENTIFIER, "flag", Span(Position(1, 4, 3), Position(1, 8, 7))),
                 Token(TokenType.RIGHT_PARENTHESIS, ")", Span(Position(1, 8, 7), Position(1, 9, 8))),
                 Token(TokenType.LEFT_BRACE, "{", Span(Position(1, 10, 9), Position(1, 11, 10))),
 

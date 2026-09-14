@@ -3,6 +3,8 @@ package cli
 import Parser
 import common.io.reader.input.InputReader
 import common.io.reporter.DiagnosticReporter
+import formatter.FormatterRunner
+import formatter.PrintScriptFormatter
 import interpreter.PrintScriptInterpreter
 import lexer.PrintScriptLexer
 import linter.LinterRunner
@@ -66,12 +68,7 @@ class CliApplication(
             Operation.VALIDATION -> validate(arguments, source, parser, reporter)
             Operation.EXECUTION -> executeSource(arguments, source, parser, reporter)
             Operation.ANALYZING -> analyze(arguments, source, parser, reporter)
-            Operation.FORMATTING -> {
-                standardError.println(
-                    "Formatting is unavailable: this repository has no formatter implementation.",
-                )
-                return UNAVAILABLE_OPERATION
-            }
+            Operation.FORMATTING -> format(arguments, source, parser, reporter)
         }
 
         return if (reporter.hasDiagnostics) DIAGNOSTIC_FOUND else SUCCESS
@@ -139,12 +136,26 @@ class CliApplication(
         else -> null
     }
 
+    private fun format(
+        arguments: CliArguments,
+        source: InputReader,
+        parser: Parser,
+        reporter: DiagnosticReporter,
+    ) {
+        FormatterRunner(PrintScriptLexer(), parser, PrintScriptFormatter()).run(
+            version = arguments.version,
+            source = source,
+            target = FormattedOutputWriter(standardOutput),
+            config = JsonConfigReader(checkNotNull(arguments.config)),
+            reporter = reporter,
+        )
+    }
+
     private companion object {
         const val SUCCESS = 0
         const val DIAGNOSTIC_FOUND = 1
         const val INVALID_ARGUMENTS = 2
         const val FILE_ERROR = 3
-        const val UNAVAILABLE_OPERATION = 4
         const val INTERNAL_ERROR = 70
     }
 }

@@ -12,6 +12,8 @@ import common.model.token.TokenType
 import common.model.value.StringValue
 import common.type.outcome.Outcome
 import common.type.outcome.getOrElse
+import parser.internal.buffer.TokenCursor
+import parser.internal.buffer.getOrElse
 import parser.internal.model.category.MissingClosingParenthesis
 import parser.internal.model.category.MissingExpression
 import parser.internal.model.category.MissingOpeningParenthesis
@@ -24,7 +26,7 @@ internal class ReadInputPrimary : Primary {
     override val type: NodeType = ReadInputExpressionNode
 
     override fun match(
-        tokens: List<Token>,
+        tokens: TokenCursor,
         table: GrammarTable,
     ): Outcome<GrammarMatch, GrammarFail> {
         var consumed = 0
@@ -101,7 +103,7 @@ internal class ReadInputPrimary : Primary {
         }
         consumed += 1
 
-        val node = buildNode(readInput, lparen, inner.node, rparen, tokens)
+        val node = buildNode(readInput, lparen, inner.node, rparen)
         return Outcome.Ok(GrammarMatch(node, consumed))
     }
 
@@ -110,7 +112,6 @@ internal class ReadInputPrimary : Primary {
         lparen: Token,
         inner: Node,
         rparen: Token,
-        tokens: List<Token>,
     ): Node {
         val children = listOf(
             Node.Leaf(
@@ -140,7 +141,7 @@ internal class ReadInputPrimary : Primary {
         return Node.Composite(
             children = children,
             type = type,
-            span = Span(tokens.first().span.start, rparen.span.end),
+            span = Span(readInput.span.start, rparen.span.end),
         )
     }
 }

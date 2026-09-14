@@ -6,6 +6,8 @@ import common.model.token.Token
 import common.model.token.TokenType
 import common.model.value.StringValue
 import common.type.outcome.Outcome
+import parser.internal.buffer.TokenCursor
+import parser.internal.buffer.getOrElse
 import parser.internal.model.category.MissingIdentifier
 import parser.internal.model.grammar.GrammarFail
 import parser.internal.model.grammar.GrammarMatch
@@ -15,7 +17,7 @@ internal class IdentifierPrimary : Primary {
     override val type = IdentifierNode
 
     override fun match(
-        tokens: List<Token>,
+        tokens: TokenCursor,
         table: GrammarTable,
     ): Outcome<GrammarMatch, GrammarFail> {
         val first = tokens.getOrElse(0) {

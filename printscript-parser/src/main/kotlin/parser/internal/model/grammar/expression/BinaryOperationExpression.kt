@@ -8,6 +8,7 @@ import common.model.token.Token
 import common.model.token.TokenType
 import common.model.value.StringValue
 import common.type.outcome.Outcome
+import parser.internal.buffer.TokenCursor
 import parser.internal.model.category.MissingOperand
 import parser.internal.model.grammar.GrammarFail
 import parser.internal.model.grammar.GrammarMatch
@@ -20,58 +21,60 @@ internal class BinaryOperationExpression(
     override val type = BinaryOperationExpressionNode
 
     override fun match(
-        tokens: List<Token>,
+        tokens: TokenCursor,
         table: GrammarTable,
     ): Outcome<GrammarMatch, GrammarFail> {
-        return parseExpression(tokens, table, 0, 0)
+        return parseExpression(tokens, table, 0)
     }
 
     private fun parseExpression(
-        tokens: List<Token>,
+        tokens: TokenCursor,
         table: GrammarTable,
-        startIndex: Int,
         minPrecedence: Int,
     ): Outcome<GrammarMatch, GrammarFail> {
-        val lhsOutcome = table.dispatchPrimary(tokens.subList(startIndex, tokens.size))
+        val lhsOutcome = table.dispatchPrimary(tokens)
         if (lhsOutcome is Outcome.Error) return lhsOutcome
 
         var current = (lhsOutcome as Outcome.Ok).value
-        var index = startIndex + current.consumed
 
-        while (index < tokens.size) {
-            val operator = tokens[index]
+        while (true) {
+            val operator = tokens.tokenAt(current.consumed) ?: break
             val operatorInfo = operators[operator.type] ?: break
             val (operatorNodeType, precedence) = operatorInfo
 
             if (precedence < minPrecedence) break
 
-            if (index + 1 >= tokens.size) {
+            if (tokens.tokenAt(current.consumed + 1) == null) {
                 return Outcome.Error(
                     GrammarFail(
                         "Missing operand after operator '${operator.lexeme}'",
                         MissingOperand,
-                        current.consumed,
+                        current.consumed + 1,
                     ),
                 )
             }
 
             val rhsOutcome = parseExpression(
-                tokens,
+                tokens.drop(current.consumed + 1),
                 table,
-                index + 1,
                 precedence + 1,
             )
 
             val rhs = when (rhsOutcome) {
                 is Outcome.Ok -> rhsOutcome.value
-                is Outcome.Error -> return rhsOutcome
+                is Outcome.Error -> {
+                    return Outcome.Error(
+                        rhsOutcome.error.copy(
+                            consumed = current.consumed + 1 + rhsOutcome.error.consumed,
+                        ),
+                    )
+                }
             }
 
             current = GrammarMatch(
                 buildNode(current.node, operator, operatorNodeType, rhs.node),
                 current.consumed + 1 + rhs.consumed,
             )
-            index += 1 + rhs.consumed
         }
 
         return Outcome.Ok(current)
