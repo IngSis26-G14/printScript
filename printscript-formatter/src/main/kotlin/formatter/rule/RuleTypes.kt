@@ -37,19 +37,14 @@ data object LineBreakAfterStatementRule : RuleType {
     override val name = "LineBreakAfterStatement"
 }
 
-data object LineBreaksAfterPrintlnRule : RuleType {
-    override val signature = "line-breaks-after-println"
-    override val name = "LineBreakAfterPrintln"
+data object LineBreaksBeforePrintlnRule : RuleType {
+    override val signature = "line-breaks-before-println"
+    override val name = "LineBreakBeforePrintln"
 }
 
 data object IndentsInsideIfBlockRule : RuleType {
     override val signature = "indent-inside-if"
     override val name = "IndentsInsideIfBlock"
-}
-
-data object IfBraceBelowLineRule : RuleType {
-    override val signature = "if-brace-below-line"
-    override val name = "IfBraceBelowLine"
 }
 
 data object IfBraceSameLineRule : RuleType {

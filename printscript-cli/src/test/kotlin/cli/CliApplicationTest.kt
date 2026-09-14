@@ -99,13 +99,38 @@ class CliApplicationTest {
     }
 
     @Test
-    fun `explains that formatting is not yet available`() {
-        val source = sourceFile("println(1);")
+    fun `formats source with exact newlines and reports parsing progress`() {
+        val source = sourceFile("let x:number=1;println(x+2);")
         val config = configFile("{}")
         val result = runCli("formatting", source.toString(), "--config", config.toString())
 
-        assertEquals(4, result.exitCode)
-        assertContains(result.error, "no formatter implementation")
+        assertEquals(0, result.exitCode, result.error)
+        assertEquals("let x: number = 1;\nprintln(x + 2);\n", result.output)
+        assertContains(result.error, "Parsing:")
+        assertEquals("let x:number=1;println(x+2);", Files.readString(source))
+    }
+
+    @Test
+    fun `formats version 1_1 blocks using JSON options`() {
+        val source = sourceFile("if(flag){println(1);}else{println(2);}")
+        val config = configFile("{\"indent-inside-if\":2,\"line-breaks-before-println\":1}")
+        val result = runCli("formatting", source.toString(), "-v", "1.1", "-c", config.toString())
+        assertEquals(0, result.exitCode, result.error)
+        assertEquals("if (flag) {\n\n  println(1);\n} else {\n\n  println(2);\n}\n", result.output)
+    }
+
+    @Test
+    fun `formatting reports syntax and configuration errors`() {
+        val source = sourceFile("println(1)")
+        val config = configFile("{}")
+        val syntax = runCli("formatting", source.toString(), "-c", config.toString())
+        assertEquals(1, syntax.exitCode)
+        assertContains(syntax.error, "Expected ';'")
+        assertEquals("", syntax.output)
+        Files.writeString(config, "{\"line-breaks-before-println\":3}")
+        val configuration = runCli("formatting", source.toString(), "-c", config.toString())
+        assertEquals(1, configuration.exitCode)
+        assertContains(configuration.error, "must be 0, 1, or 2")
     }
 
     @Test

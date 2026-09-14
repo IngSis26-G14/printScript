@@ -10,6 +10,7 @@ import common.model.visitor.context.VisitResult
 import common.model.visitor.context.VisitorContext
 import common.type.option.getOrElse
 import common.type.outcome.Outcome
+import validator.model.category.MissingAssignment
 import validator.model.category.UndefinedIdentifier
 import validator.model.error.SystemError
 import validator.model.error.ValidationError
@@ -42,6 +43,15 @@ internal class IdentifierVisitor : ContextVisitor {
             val error = ValidationError(
                 message,
                 UndefinedIdentifier,
+                node.span,
+            )
+            return VisitResult(Outcome.Error(error), context)
+        }
+
+        if (symbolInfo.value == NoneValue) {
+            val error = ValidationError(
+                "Variable '$identifierName' has not been initialized",
+                MissingAssignment,
                 node.span,
             )
             return VisitResult(Outcome.Error(error), context)

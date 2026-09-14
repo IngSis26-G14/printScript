@@ -137,7 +137,7 @@ que aplica.
 |---|---|
 | `NumberLiteralVisitor` | pasa el valor tal cual (ya viene tipado desde el parser) |
 | `StringLiteralVisitor` | saca las comillas del lexeme (`'Hello'` → `Hello`) |
-| `IdentifierVisitor` | busca el nombre en la tabla de símbolos; si no está, `UndefinedIdentifier` |
+| `IdentifierVisitor` | busca el nombre en la tabla de símbolos; si no está, `UndefinedIdentifier`; si no fue inicializado, `MissingAssignment` |
 | `ParenthesizedExpressionVisitor` | delega en la expresión interna |
 | `UnaryOperationVisitor` | prueba las `UnaryValueOperation` candidatas para el operador |
 | `BinaryOperationVisitor` | prueba las `BinaryValueOperation` candidatas para el operador |

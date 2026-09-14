@@ -4,25 +4,24 @@ import common.model.node.DivideNode
 import common.model.node.MinusNode
 import common.model.node.MultiplyNode
 import common.model.node.PlusNode
-import formatter.rule.IfBraceBelowLineRule
+import common.model.rule.BooleanRuleValue
+import common.model.rule.IntegerRuleValue
+import common.model.rule.Rule
 import formatter.rule.IfBraceSameLineRule
 import formatter.rule.IndentsInsideIfBlockRule
 import formatter.rule.LineBreakAfterStatementRule
-import formatter.rule.LineBreaksAfterPrintlnRule
+import formatter.rule.LineBreaksBeforePrintlnRule
 import formatter.rule.MandatorySingleSpaceRule
-import formatter.rule.NoSpacingAroundEqualsRule
 import formatter.rule.SpacingAfterColonRule
 import formatter.rule.SpacingAroundEqualsRule
 import formatter.rule.SpacingAroundOperatorRule
 import formatter.rule.SpacingBeforeColonRule
 import formatter.visitor.factory.ContextVisitorFactory
-import formatter.visitor.factory.IfBraceBelowLineVisitorFactory
 import formatter.visitor.factory.IfBraceSameLineVisitorFactory
 import formatter.visitor.factory.IndentsInsideIfVisitorFactory
 import formatter.visitor.factory.LineBreakAfterStatementVisitorFactory
-import formatter.visitor.factory.LineBreaksAfterPrintlnVisitorFactory
+import formatter.visitor.factory.LineBreaksBeforePrintlnVisitorFactory
 import formatter.visitor.factory.MandatorySingleSpaceVisitorFactory
-import formatter.visitor.factory.NoSpacingAroundEqualsVisitorFactory
 import formatter.visitor.factory.SpacingAfterColonVisitorFactory
 import formatter.visitor.factory.SpacingAroundEqualsVisitorFactory
 import formatter.visitor.factory.SpacingAroundOperatorVisitorFactory
@@ -30,23 +29,40 @@ import formatter.visitor.factory.SpacingBeforeColonVisitorFactory
 
 internal object PrintScriptV10 : ContextVisitorTableBuilder {
     override val factories: Map<String, ContextVisitorFactory> = mapOf(
-        NoSpacingAroundEqualsRule.signature to NoSpacingAroundEqualsVisitorFactory(),
-        SpacingAroundEqualsRule.signature to SpacingAroundEqualsVisitorFactory(),
+        MandatorySingleSpaceRule.signature to MandatorySingleSpaceVisitorFactory(),
         SpacingBeforeColonRule.signature to SpacingBeforeColonVisitorFactory(),
         SpacingAfterColonRule.signature to SpacingAfterColonVisitorFactory(),
-        MandatorySingleSpaceRule.signature to MandatorySingleSpaceVisitorFactory(),
-        LineBreaksAfterPrintlnRule.signature to LineBreaksAfterPrintlnVisitorFactory(),
+        SpacingAroundEqualsRule.signature to SpacingAroundEqualsVisitorFactory(),
         SpacingAroundOperatorRule.signature to SpacingAroundOperatorVisitorFactory(
             listOf(PlusNode, MinusNode, MultiplyNode, DivideNode),
         ),
         LineBreakAfterStatementRule.signature to LineBreakAfterStatementVisitorFactory(),
+        LineBreaksBeforePrintlnRule.signature to LineBreaksBeforePrintlnVisitorFactory(),
+    )
+    override val defaults = listOf(
+        Rule(MandatorySingleSpaceRule.signature, BooleanRuleValue(true)),
+        Rule(SpacingBeforeColonRule.signature, BooleanRuleValue(false)),
+        Rule(SpacingAfterColonRule.signature, BooleanRuleValue(true)),
+        Rule(SpacingAroundEqualsRule.signature, BooleanRuleValue(true)),
+        Rule(SpacingAroundOperatorRule.signature, BooleanRuleValue(true)),
+        Rule(LineBreakAfterStatementRule.signature, BooleanRuleValue(true)),
+        Rule(LineBreaksBeforePrintlnRule.signature, IntegerRuleValue(0)),
+    )
+    override val mandatory = setOf(
+        MandatorySingleSpaceRule.signature,
+        SpacingAroundOperatorRule.signature,
+        LineBreakAfterStatementRule.signature,
     )
 }
 
 internal object PrintScriptV11 : ContextVisitorTableBuilder {
-    override val factories: Map<String, ContextVisitorFactory> = PrintScriptV10.factories + mapOf(
-        IndentsInsideIfBlockRule.signature to IndentsInsideIfVisitorFactory(),
+    override val factories = PrintScriptV10.factories + mapOf(
         IfBraceSameLineRule.signature to IfBraceSameLineVisitorFactory(),
-        IfBraceBelowLineRule.signature to IfBraceBelowLineVisitorFactory(),
+        IndentsInsideIfBlockRule.signature to IndentsInsideIfVisitorFactory(),
     )
+    override val defaults = PrintScriptV10.defaults + listOf(
+        Rule(IfBraceSameLineRule.signature, BooleanRuleValue(true)),
+        Rule(IndentsInsideIfBlockRule.signature, IntegerRuleValue(4)),
+    )
+    override val mandatory = PrintScriptV10.mandatory + IfBraceSameLineRule.signature
 }
