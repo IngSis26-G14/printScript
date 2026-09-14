@@ -7,14 +7,9 @@ import common.model.token.TokenType
 import common.type.outcome.Outcome
 import lexer.SourceCursor
 
-internal class WordRule : LexerRule {
-
-    private val reservedWords = mapOf(
-        "let" to TokenType.LET,
-        "println" to TokenType.PRINTLN,
-        "number" to TokenType.TYPE_NUMBER,
-        "string" to TokenType.TYPE_STRING,
-    )
+internal class WordRule(
+    private val reservedWords: Map<String, TokenType>,
+) : LexerRule {
 
     override fun matches(cursor: SourceCursor): Boolean = cursor.peek()?.isIdentifierStart() == true
 

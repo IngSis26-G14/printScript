@@ -27,7 +27,7 @@ Sequence<Char>
 A diferencia del lexer y el parser, el linter no transforma su entrada — solo
 *observa* el AST y reporta hallazgos. Además recibe una segunda entrada que las
 etapas anteriores no necesitan: un `Collection<Rule>`, la configuración de lint
-del proyecto (por ejemplo, leída desde un archivo JSON por un futuro módulo CLI).
+del proyecto (por ejemplo, leída desde un archivo JSON por el módulo CLI).
 
 ## API pública
 
@@ -210,28 +210,28 @@ de código" — y puede, y debería, haber muchos a lo largo de un mismo archivo
   tabla — ni siquiera se generan diagnósticos permisivos para esa regla.
 - **No lee archivos de configuración.** `Collection<Rule>` llega ya parseado;
   convertir un archivo JSON/YAML de configuración en objetos `Rule` es
-  responsabilidad de un futuro módulo CLI (`ConfigReader` en la implementación
+  responsabilidad del módulo CLI (`ConfigReader` en la implementación
   de referencia), no del linter en sí.
 - **No valida tipos ni declaraciones.** Eso es trabajo del `Validator` — para
   cuando los nodos llegan al linter, se asume que ya son semánticamente válidos.
 
-## Extender: agregar una tercera regla (`readInput`)
+## Regla de PrintScript 1.1: `readInput`
 
-La implementación de referencia también incluye
-`MandatoryIdentifierOrLiteralInReadInputRule`, idéntica en espíritu a la regla de
-`println` pero apuntando a llamadas `readInput(...)`. No está incluida todavía
-porque el parser no produce nodos `ReadInputPrimary` hasta que se agregue soporte
-para v1.1 ahí. Cuando eso pase:
+La versión 1.1 incluye las reglas de 1.0 y
+`mandatory-variable-or-literal-in-readInput`. Con `true`, el argumento de
+`readInput` debe ser un identificador o literal directo. Una expresión como
+`readInput("enter " + "number")` genera un diagnóstico de estilo; con `false`,
+la regla queda desactivada. El recorrido también analiza llamadas dentro de
+bloques `if` y `else` anidados, sin ejecutar el programa ni leer entrada.
 
-1. Agregar el `RuleType` en `RuleTypes.kt`.
-2. Implementar `MandatoryVariableOrLiteralInReadInputVisitor` (misma forma que la
-   de `println`, chequeando `ReadInputPrimary`/su `NodeType` en vez de
-   `PrintlnStatementNode`).
-3. Agregar su fábrica.
-4. Registrar ambas en un objeto `PrintScriptV11` en `VisitorTableBuilders.kt`
-   (armado como `PrintScriptV10.factories + mapOf(...)`, el mismo patrón
-   aditivo ya usado para las versiones de `GrammarTableRegistry`), y agregar
-   `"1.1" to lazy { PrintScriptV11 }` a `VisitorTableRegistry`.
+```json
+{
+  "identifier_format": "camel case",
+  "mandatory-variable-or-literal-in-println": true,
+  "mandatory-variable-or-literal-in-readInput": true
+}
+```
 
-Ninguna regla, visitor o fábrica existente necesita cambiar — es exactamente el
-punto de extensión abierto/cerrado para el que se diseñó el patrón de tabla.
+El CLI acepta este archivo con `analyzing fuente.ps -v 1.1 --config lint.json`.
+Las pruebas de integración del CLI cubren el recorrido anidado, ambas reglas de
+argumentos y su desactivación.

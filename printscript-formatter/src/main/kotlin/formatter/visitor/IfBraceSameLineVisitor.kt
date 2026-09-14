@@ -1,7 +1,8 @@
 package formatter.visitor
 
+import common.model.node.BlockNode
+import common.model.node.ElseBlockNode
 import common.model.node.IfStatementNode
-import common.model.node.LeftBraceNode
 import common.model.node.Node
 import common.model.trivia.NewlineTrivia
 import common.model.trivia.SpaceTrivia
@@ -14,59 +15,26 @@ import common.model.visitor.context.VisitorContext
 import common.type.outcome.Outcome
 import formatter.manipulator.TriviaManipulator
 import formatter.model.value.NodeValue
-import formatter.transformer.NodeTransformer
 
-internal class IfBraceSameLineVisitor(
-    private val enforce: Boolean,
-) : ContextVisitor {
+internal class IfBraceSameLineVisitor(private val enforce: Boolean) : ContextVisitor {
+    override fun visit(node: Node.Leaf, table: ContextVisitorTable, context: VisitorContext): VisitResult =
+        VisitResult(Outcome.Ok(NoneValue), context)
 
-    override fun visit(
-        node: Node.Leaf,
-        table: ContextVisitorTable,
-        context: VisitorContext,
-    ): VisitResult {
-        return VisitResult(Outcome.Ok(NoneValue), context)
-    }
-
-    override fun visit(
-        node: Node.Composite,
-        table: ContextVisitorTable,
-        context: VisitorContext,
-    ): VisitResult {
-        if (!enforce || node.type != IfStatementNode) {
+    override fun visit(node: Node.Composite, table: ContextVisitorTable, context: VisitorContext): VisitResult {
+        if (!enforce || node.type !in setOf(IfStatementNode, ElseBlockNode)) {
             return VisitResult(Outcome.Ok(NoneValue), context)
         }
-
-        val transformedChildren = node.children.map { child ->
-            processChild(child)
-        }
-
-        val updatedNode = node.copy(children = transformedChildren)
-        val transformed = NodeTransformer.transformRecursive(updatedNode, table, context)
-
-        return VisitResult(Outcome.Ok(NodeValue(transformed)), context)
-    }
-
-    private fun processChild(node: Node): Node {
-        return when (node) {
-            is Node.Leaf -> {
-                if (node.type == LeftBraceNode) {
-                    val withoutNewlines = TriviaManipulator.removeLeading(node, NewlineTrivia)
-                    val withoutSpaces = TriviaManipulator.removeLeading(
-                        withoutNewlines,
-                        SpaceTrivia,
-                    )
-
-                    val space = listOf(Trivia(SpaceTrivia, " ", node.span))
-                    TriviaManipulator.addLeading(withoutSpaces, space)
-                } else {
-                    node
-                }
-            }
-            is Node.Composite -> {
-                val updatedChildren = node.children.map { child -> processChild(child) }
-                node.copy(children = updatedChildren)
+        val updated = node.children.map { child ->
+            if (child.type == BlockNode || child.type == ElseBlockNode) {
+                val cleaned = TriviaManipulator.removeLeading(
+                    TriviaManipulator.removeLeading(child, NewlineTrivia),
+                    SpaceTrivia,
+                )
+                TriviaManipulator.addLeading(cleaned, listOf(Trivia(SpaceTrivia, " ", child.span)))
+            } else {
+                child
             }
         }
+        return VisitResult(Outcome.Ok(NodeValue(node.copy(children = updated))), context)
     }
 }

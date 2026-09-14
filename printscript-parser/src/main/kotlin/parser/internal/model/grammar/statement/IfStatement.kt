@@ -15,18 +15,22 @@ import common.model.value.StringValue
 import common.type.option.Option
 import common.type.outcome.Outcome
 import common.type.outcome.getOrElse
+import parser.internal.buffer.TokenCursor
+import parser.internal.buffer.getOrElse
 import parser.internal.model.category.MissingClosingParenthesis
 import parser.internal.model.category.MissingIfDeclaration
 import parser.internal.model.category.MissingOpeningParenthesis
 import parser.internal.model.grammar.GrammarFail
 import parser.internal.model.grammar.GrammarMatch
+import parser.internal.model.grammar.expression.BlockExpression
+import parser.internal.model.grammar.primary.IdentifierPrimary
 import parser.internal.table.GrammarTable
 
 internal class IfStatement : Statement {
     override val type: NodeType = IfStatementNode
 
     override fun match(
-        tokens: List<Token>,
+        tokens: TokenCursor,
         table: GrammarTable,
     ): Outcome<GrammarMatch, GrammarFail> {
         var consumed = 0
@@ -71,7 +75,7 @@ internal class IfStatement : Statement {
         }
         consumed += 1
 
-        val condition = table.dispatchExpression(tokens.drop(consumed)).getOrElse {
+        val condition = IdentifierPrimary().match(tokens.drop(consumed), table).getOrElse {
             return Outcome.Error(
                 GrammarFail(
                     it.message,
@@ -102,7 +106,7 @@ internal class IfStatement : Statement {
         }
         consumed += 1
 
-        val thenBlock = table.dispatchExpression(tokens.drop(consumed)).getOrElse {
+        val thenBlock = BlockExpression().match(tokens.drop(consumed), table).getOrElse {
             return Outcome.Error(
                 GrammarFail(
                     it.message,
@@ -135,22 +139,21 @@ internal class IfStatement : Statement {
             rparen,
             thenBlock,
             elseBlock,
-            tokens,
         )
         return Outcome.Ok(GrammarMatch(node, consumed))
     }
 
     private fun parseOptionalElse(
-        tokens: List<Token>,
+        tokens: TokenCursor,
         table: GrammarTable,
     ): Outcome<Option<GrammarMatch>, GrammarFail> {
-        if (tokens.isEmpty() || tokens[0].type != TokenType.ELSE) return Outcome.Ok(Option.None)
+        if (tokens.tokenAt()?.type != TokenType.ELSE) return Outcome.Ok(Option.None)
 
         var consumed = 0
-        val elseToken = tokens[0]
+        val elseToken = checkNotNull(tokens.tokenAt())
         consumed += 1
 
-        val elseBlockExpr = table.dispatchExpression(tokens.drop(consumed)).getOrElse {
+        val elseBlockExpr = BlockExpression().match(tokens.drop(consumed), table).getOrElse {
             return Outcome.Error(
                 GrammarFail(
                     it.message,
@@ -186,7 +189,6 @@ internal class IfStatement : Statement {
         rparen: Token,
         thenBlock: GrammarMatch,
         elseBlock: Option<GrammarMatch>,
-        tokens: List<Token>,
     ): Node {
         val children = buildList {
             add(
@@ -231,7 +233,7 @@ internal class IfStatement : Statement {
         return Node.Composite(
             children = children,
             type = type,
-            span = Span(tokens.first().span.start, endSpan),
+            span = Span(ifToken.span.start, endSpan),
         )
     }
 }

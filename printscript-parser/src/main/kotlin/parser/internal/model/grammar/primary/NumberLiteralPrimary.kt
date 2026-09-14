@@ -9,6 +9,8 @@ import common.model.value.transformer.FloatValueTransformer
 import common.model.value.transformer.IntegerValueTransformer
 import common.type.option.Option
 import common.type.outcome.Outcome
+import parser.internal.buffer.TokenCursor
+import parser.internal.buffer.getOrElse
 import parser.internal.model.category.InvalidNumberLiteral
 import parser.internal.model.category.MissingNumberLiteral
 import parser.internal.model.grammar.GrammarFail
@@ -24,7 +26,7 @@ internal class NumberLiteralPrimary : Primary {
     )
 
     override fun match(
-        tokens: List<Token>,
+        tokens: TokenCursor,
         table: GrammarTable,
     ): Outcome<GrammarMatch, GrammarFail> {
         val first = tokens.getOrElse(0) {

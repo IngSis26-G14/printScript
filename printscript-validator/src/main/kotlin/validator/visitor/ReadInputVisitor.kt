@@ -5,7 +5,7 @@ import common.model.node.Node
 import common.model.node.ReadInputExpressionNode
 import common.model.node.RightParenthesisNode
 import common.model.value.NoneValue
-import common.model.value.StringValue
+import common.model.value.type.StringValueType
 import common.model.visitor.context.ContextVisitor
 import common.model.visitor.context.ContextVisitorTable
 import common.model.visitor.context.VisitResult
@@ -52,12 +52,8 @@ internal class ReadInputVisitor : ContextVisitor {
 
         val value = visit.outcome.getOrElse { return visit }
 
-        if (value is RuntimeValue) {
-            return VisitResult(Outcome.Ok(RuntimeValue(RuntimeValueType)), visit.context)
-        }
-
-        if (value !is StringValue) {
-            val message = "readInput() argument must be a string literal"
+        if (value.type != StringValueType && value.type != RuntimeValueType) {
+            val message = "readInput() argument must be a string, got ${value.type.name}"
             val error = ValidationError(message, IncorrectMethodCall, argument.span)
             return VisitResult(Outcome.Error(error), visit.context)
         }

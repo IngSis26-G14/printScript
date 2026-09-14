@@ -14,6 +14,63 @@ import kotlin.test.assertTrue
 
 class CliApplicationTest {
     @Test
+    fun `formatted version 1_1 source validates and preserves execution`() {
+        val source = sourceFile(
+            "const enabled:boolean=readEnv('ENABLED');let n:number=readInput('number');" +
+                "if(enabled){n=n*2;println(n);}else{println('disabled');}",
+        )
+        val config = configFile("{}")
+        val formatted = runCli("formatting", source.toString(), "-v", "1.1", "--config", config.toString())
+        assertEquals(0, formatted.exitCode, formatted.error)
+        val formattedSource = sourceFile(formatted.output)
+        val validation = runCli("validation", formattedSource.toString(), "-v", "1.1")
+        assertEquals(0, validation.exitCode, validation.error)
+        for ((flag, expected) in listOf("true" to "number\n6\n", "false" to "number\ndisabled\n")) {
+            for (path in listOf(source, formattedSource)) {
+                val execution = runCli(
+                    "execution",
+                    path.toString(),
+                    "-v",
+                    "1.1",
+                    input = "3\n",
+                    environment = mapOf("ENABLED" to flag),
+                )
+                assertEquals(0, execution.exitCode, execution.error)
+                assertEquals(expected, execution.output)
+            }
+        }
+    }
+
+    @Test
+    fun `analysis checks readInput and println in nested branches without reading input`() {
+        val source = sourceFile(
+            "let enabled: boolean = true; if (enabled) { if (enabled) {" +
+                "let n: number = readInput('enter ' + 'number'); println(n + 1); } }",
+        )
+        val config = configFile(
+            """{"mandatory-variable-or-literal-in-readInput":true,"mandatory-variable-or-literal-in-println":true}""",
+        )
+        val result = runCli("analyzing", source.toString(), "-v", "1.1", "--config", config.toString())
+        assertEquals(1, result.exitCode)
+        assertContains(result.error, "readInput() must take")
+        assertContains(result.error, "println() must take")
+        assertEquals("", result.output)
+        val disabled = configFile(
+            """{"mandatory-variable-or-literal-in-readInput":false,"mandatory-variable-or-literal-in-println":false}""",
+        )
+        val accepted = runCli("analyzing", source.toString(), "-v", "1.1", "--config", disabled.toString())
+        assertEquals(0, accepted.exitCode, accepted.error)
+    }
+
+    @Test
+    fun `executes a large file completely through the CLI`() {
+        val source = sourceFile("let n: number = 0;\n" + "n = n + 1;\n".repeat(10000) + "println(n);")
+        val result = runCli("execution", source.toString())
+        assertEquals(0, result.exitCode, result.error)
+        assertEquals("10000\n", result.output)
+    }
+
+    @Test
     fun `validates a source file and reports parsing progress`() {
         val source = sourceFile("let value: number = 1;")
         val result = runCli("validation", source.toString())
@@ -83,31 +140,113 @@ class CliApplicationTest {
 
     @Test
     fun `passes selected version 1_1 to the language pipeline`() {
-        val source = sourceFile("println(1);")
+        val source = sourceFile("const enabled: boolean = true; if (enabled) { println(readEnv('NAME')); }")
         val result = runCli("validation", source.toString(), "--version", "1.1")
 
-        assertEquals(1, result.exitCode)
-        assertContains(result.error, "Unsupported PrintScript version: 1.1")
+        assertEquals(0, result.exitCode)
+        assertContains(result.error, "100%")
     }
 
     @Test
-    fun `explains that formatting is not yet available`() {
-        val source = sourceFile("println(1);")
+    fun `rejects version 1_1 syntax when version 1_0 is selected`() {
+        val source = sourceFile("const enabled: boolean = true;")
+        val result = runCli("validation", source.toString(), "--version", "1.0")
+
+        assertEquals(1, result.exitCode)
+    }
+
+    @Test
+    fun `formats source with exact newlines and reports parsing progress`() {
+        val source = sourceFile("let x:number=1;println(x+2);")
         val config = configFile("{}")
         val result = runCli("formatting", source.toString(), "--config", config.toString())
 
-        assertEquals(4, result.exitCode)
-        assertContains(result.error, "no formatter implementation")
+        assertEquals(0, result.exitCode, result.error)
+        assertEquals("let x: number = 1;\nprintln(x + 2);\n", result.output)
+        assertContains(result.error, "Parsing:")
+        assertEquals("let x:number=1;println(x+2);", Files.readString(source))
     }
 
-    private fun runCli(vararg arguments: String): CliResult {
+    @Test
+    fun `formats version 1_1 blocks using JSON options`() {
+        val source = sourceFile("if(flag){println(1);}else{println(2);}")
+        val config = configFile("{\"indent-inside-if\":2,\"line-breaks-before-println\":1}")
+        val result = runCli("formatting", source.toString(), "-v", "1.1", "-c", config.toString())
+        assertEquals(0, result.exitCode, result.error)
+        assertEquals("if (flag) {\n\n  println(1);\n} else {\n\n  println(2);\n}\n", result.output)
+    }
+
+    @Test
+    fun `formatting reports syntax and configuration errors`() {
+        val source = sourceFile("println(1)")
+        val config = configFile("{}")
+        val syntax = runCli("formatting", source.toString(), "-c", config.toString())
+        assertEquals(1, syntax.exitCode)
+        assertContains(syntax.error, "Expected ';'")
+        assertEquals("", syntax.output)
+        Files.writeString(config, "{\"line-breaks-before-println\":3}")
+        val configuration = runCli("formatting", source.toString(), "-c", config.toString())
+        assertEquals(1, configuration.exitCode)
+        assertContains(configuration.error, "must be 0, 1, or 2")
+    }
+
+    @Test
+    fun `executes version 1_1 with standard input and environment`() {
+        val source = sourceFile(
+            "const flag: boolean = true; let n: number = readInput('Number'); " +
+                "if (flag) { println(n); println(readEnv('NAME')); }",
+        )
+        val result = runCli(
+            "execution",
+            source.toString(),
+            "--version",
+            "1.1",
+            input = "12\n",
+            environment = mapOf("NAME" to "Ada"),
+        )
+        assertEquals(0, result.exitCode, result.error)
+        assertEquals("Number\n12\nAda\n", result.output)
+    }
+
+    @Test
+    fun `conditional validation requires a declared boolean variable`() {
+        val invalidPrograms = listOf(
+            "let flag: number = 1; if (flag) {}",
+            "let flag: string = 'true'; if (flag) {}",
+            "let flag: number = readInput('number'); if (flag) {}",
+            "let flag: boolean; if (flag) {}",
+            "if (missing) {}",
+            "if (true) {}",
+            "if (readInput('flag')) {}",
+        )
+        for (program in invalidPrograms) {
+            val result = runCli("validation", sourceFile(program).toString(), "--version", "1.1")
+            assertEquals(1, result.exitCode, program)
+            assertTrue(Regex("\\d+:\\d+-\\d+:\\d+").containsMatchIn(result.error), result.error)
+        }
+    }
+
+    @Test
+    fun `conditional validation accepts boolean variables from runtime reads`() {
+        for (initializer in listOf("true", "readInput('flag')", "readEnv('FLAG')")) {
+            val program = "let flag: boolean = $initializer; if (flag) {} else { if (flag) {} }"
+            val result = runCli("validation", sourceFile(program).toString(), "--version", "1.1")
+            assertEquals(0, result.exitCode, result.error)
+        }
+    }
+
+    private fun runCli(
+        vararg arguments: String,
+        input: String = "",
+        environment: Map<String, String> = emptyMap(),
+    ): CliResult {
         val outputBytes = ByteArrayOutputStream()
         val errorBytes = ByteArrayOutputStream()
         val application = CliApplication(
             standardOutput = PrintStream(outputBytes),
             standardError = PrintStream(errorBytes),
-            standardInput = BufferedReader(StringReader("")),
-            environment = emptyMap(),
+            standardInput = BufferedReader(StringReader(input)),
+            environment = environment,
         )
 
         val exitCode = application.run(arrayOf(*arguments))

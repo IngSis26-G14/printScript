@@ -8,13 +8,63 @@ import common.type.outcome.Outcome
 import lexer.error.LexError
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
 
 class PrintScriptLexerTest {
 
     private val lexer = PrintScriptLexer()
 
-    private fun lex(source: String): List<Outcome<Token, Diagnostic>> =
-        lexer.lex("1.0", source.asSequence()).toList()
+    private fun lex(source: String, version: String = "1.0"): List<Outcome<Token, Diagnostic>> =
+        lexer.lex(version, source.asSequence()).toList()
+
+    @Test
+    fun `recognizes new keywords and braces only in version 1_1`() {
+        val words = "const boolean true false if else readInput readEnv"
+        val tokens = tokensOf(lex("$words {}", "1.1"))
+        assertEquals(
+            listOf(
+                TokenType.CONST,
+                TokenType.TYPE_BOOLEAN,
+                TokenType.BOOLEAN_LITERAL,
+                TokenType.BOOLEAN_LITERAL,
+                TokenType.IF,
+                TokenType.ELSE,
+                TokenType.READ_INPUT,
+                TokenType.READ_ENV,
+                TokenType.LEFT_BRACE,
+                TokenType.RIGHT_BRACE,
+            ),
+            tokens.map { it.type },
+        )
+        assertEquals(words.split(" ") + listOf("{", "}"), tokens.map { it.lexeme })
+        assertEquals(List(8) { TokenType.IDENTIFIER }, tokensOf(lex(words)).map { it.type })
+        for (brace in listOf("{", "}")) {
+            assertEquals("Unexpected character '$brace'", lastError(lex(brace)).message)
+        }
+    }
+
+    @Test
+    fun `version 1_1 preserves existing tokens and positions`() {
+        val source = "let name: string = 'Joe';\nprintln(name + 12.5 / 2);"
+        assertEquals(tokensOf(lex(source)), tokensOf(lex(source, "1.1")))
+        val tokens = tokensOf(lex("\n  true {}", "1.1"))
+        assertEquals(Position(line = 2, column = 3, index = 3), tokens.first().span.start)
+        assertEquals(Position(line = 2, column = 7, index = 7), tokens.first().span.end)
+    }
+
+    @Test
+    fun `new keyword prefixes and different casing remain identifiers`() {
+        val source = "constant booleanValue trueValue falsehood iffy elsewhere readInputValue readEnvValue True"
+        assertEquals(List(9) { TokenType.IDENTIFIER }, tokensOf(lex(source, "1.1")).map { it.type })
+    }
+
+    @Test
+    fun `unsupported versions fail before reading source`() {
+        val source = sequence<Char> { error("Source must not be consumed") }
+        val result = lexer.lex("2.0", source).single()
+        val error = assertIs<Outcome.Error<Diagnostic>>(result)
+        assertEquals("Unsupported PrintScript version: 2.0", error.error.message)
+    }
 
     private fun tokensOf(outcomes: List<Outcome<Token, Diagnostic>>): List<Token> =
         outcomes.map {

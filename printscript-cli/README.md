@@ -24,11 +24,12 @@ Examples:
 printscript validation examples/program.ps --version 1.0
 printscript execution examples/program.ps -v 1.0
 printscript analyzing examples/program.ps --config examples/lint.json
+printscript formatting examples/program.ps -v 1.1 --config examples/format.json
 ```
 
 The version defaults to `1.0`. Versions `1.0` and `1.1` can be selected from
-the terminal, although the lexer, parser, and interpreter still need language
-support for `1.1` before that version can process programs.
+the terminal. The lexer, parser, and interpreter support both versions. Version 1.1
+execution supports booleans, constants, conditionals, `readInput`, and `readEnv`.
 
 Analysis configuration is a JSON object containing string, boolean, or integer
 rule values:
@@ -42,8 +43,24 @@ rule values:
 
 Parsing progress and diagnostics are written to standard error. Program output
 is written to standard output. Exit codes are `0` for success, `1` when a
-diagnostic is found, `2` for invalid arguments, `3` for filesystem errors, `4`
-for an unavailable operation, and `70` for an unexpected I/O failure.
+diagnostic is found, `2` for invalid arguments, `3` for filesystem errors,
+and `70` for an unexpected I/O failure.
 
-Formatting is recognized by the CLI but is currently unavailable because this
-repository does not contain a formatter implementation.
+Formatting writes source text to standard output, preserving exactly the newlines
+produced by the formatter. The input file is not modified. Use a different output
+file when redirecting the result. An empty JSON object selects the defaults.
+
+Example `format.json` for version 1.1:
+
+```json
+{
+  "enforce-spacing-before-colon-in-declaration": false,
+  "enforce-spacing-after-colon-in-declaration": true,
+  "enforce-spacing-around-equals": true,
+  "line-breaks-before-println": 1,
+  "indent-inside-if": 2
+}
+```
+
+See the [formatter configuration](../printscript-formatter/README.md) for defaults,
+mandatory rules, and the meaning of blank lines before `println`.

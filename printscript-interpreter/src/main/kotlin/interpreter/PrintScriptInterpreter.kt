@@ -8,8 +8,12 @@ import common.model.diagnostic.Diagnostic
 import common.model.node.Node
 import interpreter.internal.ExpressionEvaluator
 import interpreter.internal.InMemorySymbolTable
+import interpreter.internal.RuntimeReader
 import interpreter.internal.StatementExecutor
+import interpreter.internal.VersionSupport
 import interpreter.internal.diagnostic.ConfigurationDiagnostic
+import interpreter.internal.diagnostic.InterpreterDiagnostic
+import interpreter.internal.diagnostic.Runtime
 
 class PrintScriptInterpreter : Interpreter {
     override fun interpret(
@@ -19,21 +23,25 @@ class PrintScriptInterpreter : Interpreter {
         output: OutputWriter,
         env: EnvReader,
     ): Sequence<Diagnostic> = sequence {
-        if (version != SUPPORTED_VERSION) {
+        if (version !in setOf("1.0", "1.1")) {
             yield(ConfigurationDiagnostic("Unsupported PrintScript version: $version"))
             return@sequence
         }
 
         val symbols = InMemorySymbolTable()
-        val evaluator = ExpressionEvaluator(symbols)
-        val executor = StatementExecutor(symbols, evaluator, input, output, env)
+        val evaluator = ExpressionEvaluator(symbols, RuntimeReader(input, output, env))
+        val executor = StatementExecutor(symbols, evaluator, output)
 
         nodes.forEach { node ->
-            executor.execute(node)?.let { yield(it) }
+            val unsupported = VersionSupport.unsupportedNode(node, version)
+            if (unsupported != null) {
+                yield(InterpreterDiagnostic("Feature requires PrintScript 1.1", span = unsupported.span))
+                return@sequence
+            }
+            executor.execute(node)?.let {
+                yield(it)
+                if (it.category == Runtime) return@sequence
+            }
         }
     }.constrainOnce()
-
-    private companion object {
-        const val SUPPORTED_VERSION = "1.0"
-    }
 }
