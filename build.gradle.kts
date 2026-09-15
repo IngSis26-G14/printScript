@@ -10,7 +10,7 @@ repositories {
     mavenCentral()
 }
 
-val minimumCoverage = 75
+val minimumCoverage = 80
 
 koverMerged {
     enable()
