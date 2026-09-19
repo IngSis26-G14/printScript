@@ -15,7 +15,7 @@ import interpreter.internal.diagnostic.ConfigurationDiagnostic
 import interpreter.internal.diagnostic.InterpreterDiagnostic
 import interpreter.internal.diagnostic.Runtime
 
-class PrintScriptInterpreter : Interpreter {
+class DefaultPrintScriptInterpreter : Interpreter {
     override fun interpret(
         version: String,
         nodes: Sequence<Node>,

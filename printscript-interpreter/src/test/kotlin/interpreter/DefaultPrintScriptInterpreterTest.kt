@@ -14,7 +14,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-class PrintScriptInterpreterTest {
+class DefaultPrintScriptInterpreterTest {
 
     @Test
     fun `interprets a variable value`() {
@@ -88,7 +88,7 @@ class PrintScriptInterpreterTest {
     @Test
     fun `reports unsupported versions before consuming nodes`() {
         val output = RecordingOutput()
-        val diagnostics = PrintScriptInterpreter().interpret(
+        val diagnostics = DefaultPrintScriptInterpreter().interpret(
             "2.0",
             emptySequence(),
             EmptyInput,
@@ -115,7 +115,7 @@ class PrintScriptInterpreterTest {
                 is Outcome.Error -> error(it.error.format())
             }
         }
-        return PrintScriptInterpreter().interpret(
+        return DefaultPrintScriptInterpreter().interpret(
             "1.0",
             nodes.asSequence(),
             EmptyInput,

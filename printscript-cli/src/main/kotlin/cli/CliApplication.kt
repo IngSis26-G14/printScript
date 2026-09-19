@@ -5,7 +5,7 @@ import common.io.reader.input.InputReader
 import common.io.reporter.DiagnosticReporter
 import formatter.FormatterRunner
 import formatter.PrintScriptFormatter
-import interpreter.PrintScriptInterpreter
+import interpreter.DefaultPrintScriptInterpreter
 import lexer.PrintScriptLexer
 import linter.LinterRunner
 import linter.PrintScriptLinter
@@ -99,7 +99,7 @@ class CliApplication(
         ExecutionRunner(
             lexer = PrintScriptLexer(),
             parser = PrintScriptParser(),
-            interpreter = PrintScriptInterpreter(),
+            interpreter = DefaultPrintScriptInterpreter(),
         ).run(
             version = arguments.version,
             source = FileInputReader(arguments.source),

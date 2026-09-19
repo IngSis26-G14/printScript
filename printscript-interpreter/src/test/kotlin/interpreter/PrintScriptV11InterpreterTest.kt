@@ -159,7 +159,7 @@ class PrintScriptV11InterpreterTest {
             override fun read(key: String): Option<Value> =
                 env[key]?.let { Option.Some(StringValue(it)) } ?: Option.None
         }
-        val diagnostics = PrintScriptInterpreter().interpret(version, nodes, inputReader, writer, envReader).toList()
+        val diagnostics = DefaultPrintScriptInterpreter().interpret(version, nodes, inputReader, writer, envReader).toList()
         return Result(output, diagnostics)
     }
 

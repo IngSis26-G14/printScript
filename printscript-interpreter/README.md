@@ -54,7 +54,7 @@ val diagnostics = PrintScriptInterpreter()
 
 Cada invocación de `interpret` crea una tabla de símbolos nueva. El estado no se
 comparte entre ejecuciones distintas, aunque se reutilice la misma instancia de
-`PrintScriptInterpreter`.
+`DefaultPrintScriptInterpreter`.
 
 ## Funcionalidades soportadas
 
