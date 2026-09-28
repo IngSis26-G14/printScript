@@ -12,6 +12,8 @@ import common.model.token.TokenType
 import common.model.value.StringValue
 import common.type.option.Option
 import common.type.outcome.Outcome
+import parser.internal.buffer.TokenCursor
+import parser.internal.buffer.getOrElse
 import parser.internal.model.category.MissingClosingParenthesis
 import parser.internal.model.category.MissingEndOfLine
 import parser.internal.model.category.MissingExpression
@@ -24,7 +26,7 @@ internal class PrintlnStatement : Statement {
     override val type = PrintlnStatementNode
 
     override fun match(
-        tokens: List<Token>,
+        tokens: TokenCursor,
         table: GrammarTable,
     ): Outcome<GrammarMatch, GrammarFail> {
         var consumed = 0
@@ -120,15 +122,15 @@ internal class PrintlnStatement : Statement {
         }
         consumed += 1
 
-        val node = buildNode(println, lparen, inner, rparen, semicolon, tokens)
+        val node = buildNode(println, lparen, inner, rparen, semicolon)
         return Outcome.Ok(GrammarMatch(node, consumed))
     }
 
     private fun parseInner(
-        tokens: List<Token>,
+        tokens: TokenCursor,
         table: GrammarTable,
     ): Outcome<Option<GrammarMatch>, GrammarFail> {
-        val noArguments = tokens.isEmpty() || tokens[0].type == TokenType.RIGHT_PARENTHESIS
+        val noArguments = tokens.tokenAt()?.type == TokenType.RIGHT_PARENTHESIS
         if (noArguments) {
             return Outcome.Ok(Option.None)
         }
@@ -145,7 +147,6 @@ internal class PrintlnStatement : Statement {
         inner: Option<GrammarMatch>,
         rparen: Token,
         semicolon: Token,
-        tokens: List<Token>,
     ): Node {
         val children = buildList {
             add(
@@ -195,7 +196,7 @@ internal class PrintlnStatement : Statement {
         return Node.Composite(
             children = children,
             type = type,
-            span = Span(tokens.first().span.start, semicolon.span.end),
+            span = Span(println.span.start, semicolon.span.end),
         )
     }
 }

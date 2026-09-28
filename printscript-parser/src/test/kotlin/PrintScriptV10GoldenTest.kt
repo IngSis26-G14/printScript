@@ -77,7 +77,7 @@ class PrintScriptV10GoldenTest {
     }
 
     @Test
-    fun `test case 11`() {
+    fun `test case 10`() {
         run("string-and-number-binary-expression")
     }
 }

@@ -13,56 +13,32 @@ import common.type.outcome.Outcome
 import formatter.manipulator.TriviaManipulator
 import formatter.model.value.NodeValue
 
-internal class MandatorySingleSpaceVisitor(
-    private val enforce: Boolean,
-) : ContextVisitor {
+internal class MandatorySingleSpaceVisitor(private val enforce: Boolean) : ContextVisitor {
+    override fun visit(node: Node.Leaf, table: ContextVisitorTable, context: VisitorContext): VisitResult =
+        VisitResult(Outcome.Ok(NoneValue), context)
 
-    override fun visit(
-        node: Node.Leaf,
-        table: ContextVisitorTable,
-        context: VisitorContext,
-    ): VisitResult {
-        return VisitResult(Outcome.Ok(NoneValue), context)
-    }
-
-    override fun visit(
-        node: Node.Composite,
-        table: ContextVisitorTable,
-        context: VisitorContext,
-    ): VisitResult {
-        if (!enforce) {
-            return VisitResult(Outcome.Ok(NoneValue), context)
-        }
-
+    override fun visit(node: Node.Composite, table: ContextVisitorTable, context: VisitorContext): VisitResult {
+        if (!enforce) return VisitResult(Outcome.Ok(NoneValue), context)
         val children = node.children.toList()
-        if (children.size < 2) {
-            return VisitResult(Outcome.Ok(NoneValue), context)
+        if (children.size < 2) return VisitResult(Outcome.Ok(NoneValue), context)
+
+        val cleaned = children.map { child ->
+            TriviaManipulator.removeLeading(
+                TriviaManipulator.removeTrailing(child, SpaceTrivia),
+                SpaceTrivia,
+            )
         }
-
-        val cleanedChildren = children.map { child ->
-            val withoutTrailing = TriviaManipulator.removeTrailing(child, SpaceTrivia)
-            TriviaManipulator.removeLeading(withoutTrailing, SpaceTrivia)
-        }
-
-        val finalChildren = cleanedChildren.mapIndexed { i, current ->
-            val next = cleanedChildren.getOrNull(i + 1)
-
-            if (next != null && !shouldHaveNoSpaceBefore(next)) {
-                val space = listOf(Trivia(SpaceTrivia, " ", current.span))
-                TriviaManipulator.addTrailing(current, space)
+        val separated = cleaned.mapIndexed { index, current ->
+            val next = cleaned.getOrNull(index + 1)
+            if (next != null && (next !is Node.Leaf || next.type != SemicolonNode)) {
+                TriviaManipulator.addTrailing(
+                    current,
+                    listOf(Trivia(SpaceTrivia, " ", current.span)),
+                )
             } else {
                 current
             }
         }
-
-        val updatedNode = node.copy(children = finalChildren)
-        return VisitResult(Outcome.Ok(NodeValue(updatedNode)), context)
-    }
-
-    private fun shouldHaveNoSpaceBefore(node: Node): Boolean {
-        return when (node) {
-            is Node.Leaf -> node.type is SemicolonNode
-            is Node.Composite -> false
-        }
+        return VisitResult(Outcome.Ok(NodeValue(node.copy(children = separated))), context)
     }
 }

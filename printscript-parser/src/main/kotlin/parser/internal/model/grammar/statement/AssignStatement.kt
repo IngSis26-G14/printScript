@@ -11,6 +11,8 @@ import common.model.token.TokenType
 import common.model.value.StringValue
 import common.type.outcome.Outcome
 import common.type.outcome.getOrElse
+import parser.internal.buffer.TokenCursor
+import parser.internal.buffer.getOrElse
 import parser.internal.model.category.MissingAssignment
 import parser.internal.model.category.MissingEndOfLine
 import parser.internal.model.category.MissingIdentifier
@@ -22,7 +24,7 @@ internal class AssignStatement : Statement {
     override val type = AssignStatementNode
 
     override fun match(
-        tokens: List<Token>,
+        tokens: TokenCursor,
         table: GrammarTable,
     ): Outcome<GrammarMatch, GrammarFail> {
         var consumed = 0
@@ -99,7 +101,7 @@ internal class AssignStatement : Statement {
         }
         consumed += 1
 
-        val node = buildNode(identifier, equals, rhs.node, semicolon, tokens)
+        val node = buildNode(identifier, equals, rhs.node, semicolon)
         return Outcome.Ok(GrammarMatch(node, consumed))
     }
 
@@ -108,7 +110,6 @@ internal class AssignStatement : Statement {
         equals: Token,
         rhs: Node,
         semicolon: Token,
-        tokens: List<Token>,
     ): Node {
         val children = listOf(
             Node.Leaf(
@@ -138,7 +139,7 @@ internal class AssignStatement : Statement {
         return Node.Composite(
             children = children,
             type = type,
-            span = Span(tokens.first().span.start, semicolon.span.end),
+            span = Span(identifier.span.start, semicolon.span.end),
         )
     }
 }

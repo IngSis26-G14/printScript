@@ -9,6 +9,8 @@ import common.model.token.TokenType
 import common.model.value.StringValue
 import common.type.outcome.Outcome
 import common.type.outcome.getOrElse
+import parser.internal.buffer.TokenCursor
+import parser.internal.buffer.getOrElse
 import parser.internal.model.category.InvalidOperator
 import parser.internal.model.category.MissingOperator
 import parser.internal.model.grammar.GrammarFail
@@ -21,7 +23,7 @@ internal class UnaryOperationPrimary(
     override val type = UnaryOperationNode
 
     override fun match(
-        tokens: List<Token>,
+        tokens: TokenCursor,
         table: GrammarTable,
     ): Outcome<GrammarMatch, GrammarFail> {
         var consumed = 0
@@ -47,8 +49,7 @@ internal class UnaryOperationPrimary(
         }
         consumed += 1
 
-        val expression = tokens.subList(consumed, tokens.size)
-        val operand = table.dispatchPrimary(expression).getOrElse {
+        val operand = table.dispatchPrimary(tokens.drop(consumed)).getOrElse {
             return Outcome.Error(
                 GrammarFail(
                     it.message,

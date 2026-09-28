@@ -73,7 +73,7 @@ pluginManager.withPlugin("org.jetbrains.kotlin.jvm") {
         repositories {
             maven {
                 name = "GitHubPackages"
-                url = uri("https://maven.pkg.github.com/IngSis26-G14/printScript")
+                url = uri("https://maven.pkg.github.com/ingsis26-g14/printScript")
 
                 credentials {
                     username = credential("GITHUB_ACTOR")

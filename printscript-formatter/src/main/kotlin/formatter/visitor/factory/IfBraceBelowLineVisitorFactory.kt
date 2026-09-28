@@ -10,8 +10,6 @@ import formatter.visitor.IfBraceBelowLineVisitor
 internal class IfBraceBelowLineVisitorFactory : ContextVisitorFactory {
     override val ruleType: RuleType = IfBraceBelowLineRule
 
-    override fun create(rule: Rule): ContextVisitor {
-        val enforce = (rule.value as BooleanRuleValue).value
-        return IfBraceBelowLineVisitor(enforce)
-    }
+    override fun create(rule: Rule): ContextVisitor =
+        IfBraceBelowLineVisitor((rule.value as BooleanRuleValue).value)
 }

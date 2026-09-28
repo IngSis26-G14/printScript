@@ -1,47 +1,42 @@
 package formatter.transformer
 
 import common.model.node.Node
+import common.model.visitor.context.ContextVisitor
 import common.model.visitor.context.ContextVisitorTable
 import common.model.visitor.context.VisitResult
 import common.model.visitor.context.VisitorContext
 import common.type.outcome.Outcome
-import formatter.model.value.DocValue
+import formatter.model.value.NodeValue
 
 internal object NodeTransformer {
-
-    fun applyDispatchResult(child: Node, dispatchResult: VisitResult): Node {
-        val outcome = dispatchResult.outcome
-
-        return when (outcome) {
-            is Outcome.Ok -> {
-                val value = outcome.value
-                if (value is DocValue) {
-                    val doc = value.value
-                    when (child) {
-                        is Node.Leaf -> child.copy(leading = doc.leading, trailing = doc.trailing)
-                        is Node.Composite -> child
-                    }
-                } else {
-                    child
-                }
-            }
-            else -> child
-        }
-    }
-
+    /** Applies one rule bottom-up, retaining transformed children and context. */
     fun transformRecursive(
         node: Node,
+        visitor: ContextVisitor,
         table: ContextVisitorTable,
         context: VisitorContext,
-    ): Node {
-        return when (node) {
+    ): VisitResult {
+        var currentContext = context
+        val updated = when (node) {
             is Node.Leaf -> node
             is Node.Composite -> {
-                val transformedChildren = node.children.map { child ->
-                    val dispatched = applyDispatchResult(child, table.dispatch(child, context))
-                    transformRecursive(dispatched, table, context)
+                val children = mutableListOf<Node>()
+                for (child in node.children) {
+                    val result = transformRecursive(child, visitor, table, currentContext)
+                    val outcome = result.outcome
+                    if (outcome is Outcome.Error) return result
+                    children.add(((outcome as Outcome.Ok).value as NodeValue).value)
+                    currentContext = result.context
                 }
-                node.copy(children = transformedChildren)
+                node.copy(children = children)
+            }
+        }
+        val visit = updated.accept(visitor, table, currentContext)
+        return when (val outcome = visit.outcome) {
+            is Outcome.Error -> visit
+            is Outcome.Ok -> {
+                val value = outcome.value as? NodeValue ?: NodeValue(updated)
+                VisitResult(Outcome.Ok(value), visit.context)
             }
         }
     }

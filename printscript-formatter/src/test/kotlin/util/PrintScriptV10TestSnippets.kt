@@ -459,7 +459,7 @@ internal object PrintScriptV10TestSnippets {
         )
 
         TestSnippetRegistry.register(
-            "spacing-after-colon",
+            "spacing-after-colon-trailing-trivia",
             listOf(
                 Node.Composite(
                     type = LetDeclarationStatementNode,
@@ -603,7 +603,7 @@ internal object PrintScriptV10TestSnippets {
         )
 
         TestSnippetRegistry.register(
-            "spacing-around-equals",
+            "spacing-around-equals-trailing-trivia",
             listOf(
                 Node.Composite(
                     type = LetDeclarationStatementNode,

@@ -14,7 +14,7 @@ internal fun Node.Composite.toDoc(): Doc {
 
 internal fun Node.Leaf.toDoc(): Doc {
     return Doc(
-        text = format(),
+        text = value.format(),
         span = span,
         leading = leading,
         trailing = trailing,

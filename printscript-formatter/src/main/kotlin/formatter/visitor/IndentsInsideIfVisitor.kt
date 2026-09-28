@@ -19,7 +19,6 @@ import common.type.outcome.Outcome
 import formatter.manipulator.TriviaManipulator
 import formatter.model.context.IndentState
 import formatter.model.value.NodeValue
-import formatter.transformer.NodeTransformer
 
 internal class IndentsInsideIfVisitor(
     private val indents: Int,
@@ -45,9 +44,7 @@ internal class IndentsInsideIfVisitor(
         val state = context.get(IndentState::class).getOrElse { IndentState(0) }
 
         val updatedNode = processIfStatement(node, state.currentLevel)
-        val transformed = NodeTransformer.transformRecursive(updatedNode, table, context)
-
-        return VisitResult(Outcome.Ok(NodeValue(transformed)), context)
+        return VisitResult(Outcome.Ok(NodeValue(updatedNode)), context)
     }
 
     private fun processIfStatement(

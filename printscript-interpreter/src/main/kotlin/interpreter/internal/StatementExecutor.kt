@@ -1,18 +1,25 @@
 package interpreter.internal
 
-import common.io.reader.env.EnvReader
-import common.io.reader.input.InputReader
 import common.io.writer.OutputWriter
 import common.model.diagnostic.Diagnostic
 import common.model.node.AssignNode
 import common.model.node.AssignStatementNode
+import common.model.node.BlockNode
+import common.model.node.BooleanTypeNode
+import common.model.node.ConstDeclarationStatementNode
+import common.model.node.ElseBlockNode
 import common.model.node.IdentifierNode
+import common.model.node.IfStatementNode
+import common.model.node.LeftBraceNode
 import common.model.node.LetDeclarationStatementNode
 import common.model.node.Node
 import common.model.node.NumberTypeNode
 import common.model.node.PrintlnStatementNode
+import common.model.node.RightBraceNode
 import common.model.node.StringTypeNode
+import common.model.value.BooleanValue
 import common.model.value.StringValue
+import common.model.value.type.BooleanValueType
 import common.model.value.type.NumberValueType
 import common.model.value.type.StringValueType
 import interpreter.internal.diagnostic.InterpreterDiagnostic
@@ -20,12 +27,12 @@ import interpreter.internal.diagnostic.InterpreterDiagnostic
 internal class StatementExecutor(
     private val symbols: SymbolTable,
     private val evaluator: ExpressionEvaluator,
-    @Suppress("unused") private val input: InputReader,
     private val output: OutputWriter,
-    @Suppress("unused") private val env: EnvReader,
 ) {
     fun execute(node: Node): Diagnostic? = when (node.type) {
-        LetDeclarationStatementNode -> declare(node)
+        LetDeclarationStatementNode, ConstDeclarationStatementNode -> declare(node)
+        IfStatementNode -> conditional(node)
+        BlockNode -> block(node)
         AssignStatementNode -> assign(node)
         PrintlnStatementNode -> print(node)
         else -> InterpreterDiagnostic("Unsupported statement '${node.type}'", span = node.span)
@@ -34,7 +41,7 @@ internal class StatementExecutor(
     private fun declare(node: Node): Diagnostic? {
         val children = children(node) ?: return malformed(node)
         val identifierIndex = children.indexOfFirst { it.type == IdentifierNode }
-        val typeIndex = children.indexOfFirst { it.type == NumberTypeNode || it.type == StringTypeNode }
+        val typeIndex = children.indexOfFirst { it.type in declaredTypes }
         if (identifierIndex < 0 || typeIndex < 0) return malformed(node)
         val name = leafText(children[identifierIndex]) ?: return malformed(node)
         if (symbols.find(name) != null) {
@@ -44,11 +51,13 @@ internal class StatementExecutor(
             )
         }
 
-        val declaredType = if (children[typeIndex].type == NumberTypeNode) NumberValueType else StringValueType
+        val declaredType = declaredTypes.getValue(children[typeIndex].type)
         val assignIndex = children.indexOfFirst { it.type == AssignNode }
+        val isMutable = node.type != ConstDeclarationStatementNode
+        if (!isMutable && assignIndex < 0) return malformed(node)
         val value = if (assignIndex >= 0) {
             val expression = children.getOrNull(assignIndex + 1) ?: return malformed(node)
-            when (val result = evaluator.evaluate(expression)) {
+            when (val result = evaluator.evaluate(expression, declaredType)) {
                 is EvaluationResult.Failure -> return result.diagnostic
                 is EvaluationResult.Success -> result.value
             }
@@ -61,7 +70,7 @@ internal class StatementExecutor(
                 span = expressionSpan(children, assignIndex),
             )
         }
-        symbols.declare(name, declaredType, value)
+        symbols.declare(name, declaredType, value, isMutable)
         return null
     }
 
@@ -73,9 +82,12 @@ internal class StatementExecutor(
             "Variable '$name' is not declared",
             span = identifier.span,
         )
+        if (!variable.isMutable) {
+            return InterpreterDiagnostic("Cannot reassign constant '$name'", span = identifier.span)
+        }
         val assignIndex = children.indexOfFirst { it.type == AssignNode }
         val expression = children.getOrNull(assignIndex + 1) ?: return malformed(node)
-        val value = when (val result = evaluator.evaluate(expression)) {
+        val value = when (val result = evaluator.evaluate(expression, variable.declaredType)) {
             is EvaluationResult.Failure -> return result.diagnostic
             is EvaluationResult.Success -> result.value
         }
@@ -110,6 +122,37 @@ internal class StatementExecutor(
         output.write(sequenceOf(text))
         return null
     }
+
+    private fun conditional(node: Node): Diagnostic? {
+        val children = children(node) ?: return malformed(node)
+        val condition = children.getOrNull(2) ?: return malformed(node)
+        val result = evaluator.evaluate(condition, BooleanValueType)
+        if (result is EvaluationResult.Failure) return result.diagnostic
+        val value = (result as EvaluationResult.Success).value
+        if (value !is BooleanValue) {
+            return InterpreterDiagnostic("If condition must be a boolean", span = condition.span)
+        }
+        val thenBlock = children.firstOrNull { it.type == BlockNode } ?: return malformed(node)
+        if (value.value) return block(thenBlock)
+        val elseBlock = children.firstOrNull { it.type == ElseBlockNode } ?: return null
+        val body = children(elseBlock)?.firstOrNull { it.type == BlockNode } ?: return malformed(elseBlock)
+        return block(body)
+    }
+
+    private fun block(node: Node): Diagnostic? {
+        val statements = children(node) ?: return malformed(node)
+        for (statement in statements) {
+            if (statement.type == LeftBraceNode || statement.type == RightBraceNode) continue
+            execute(statement)?.let { return it }
+        }
+        return null
+    }
+
+    private val declaredTypes = mapOf(
+        NumberTypeNode to NumberValueType,
+        StringTypeNode to StringValueType,
+        BooleanTypeNode to BooleanValueType,
+    )
 
     private fun children(node: Node): List<Node>? = (node as? Node.Composite)?.children?.toList()
 

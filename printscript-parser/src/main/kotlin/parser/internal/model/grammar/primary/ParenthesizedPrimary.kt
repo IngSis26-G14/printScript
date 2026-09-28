@@ -10,6 +10,8 @@ import common.model.token.TokenType
 import common.model.value.StringValue
 import common.type.outcome.Outcome
 import common.type.outcome.getOrElse
+import parser.internal.buffer.TokenCursor
+import parser.internal.buffer.getOrElse
 import parser.internal.model.category.MissingClosingParenthesis
 import parser.internal.model.category.MissingOpeningParenthesis
 import parser.internal.model.grammar.GrammarFail
@@ -20,7 +22,7 @@ internal class ParenthesizedPrimary : Primary {
     override val type = ParenthesizedExpressionNode
 
     override fun match(
-        tokens: List<Token>,
+        tokens: TokenCursor,
         table: GrammarTable,
     ): Outcome<GrammarMatch, GrammarFail> {
         var consumed = 0
@@ -46,7 +48,7 @@ internal class ParenthesizedPrimary : Primary {
         consumed += 1
 
         val inner = table.dispatchExpression(tokens.drop(consumed)).getOrElse {
-            return Outcome.Error(it)
+            return Outcome.Error(it.copy(consumed = consumed + it.consumed))
         }
         consumed += inner.consumed
 

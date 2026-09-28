@@ -10,8 +10,6 @@ import common.type.outcome.Outcome
 import parser.internal.buffer.TokenBuffer
 import parser.internal.model.error.ConfigurationError
 import parser.internal.model.error.ParseError
-import parser.internal.model.scan.NodeScan
-import parser.internal.scanner.NodeScanner
 import parser.internal.table.GrammarTable
 import parser.internal.table.GrammarTableRegistry
 
@@ -47,21 +45,16 @@ class PrintScriptParser : Parser {
     ): Sequence<Outcome<Node, Diagnostic>> {
         return sequence {
             val buffer = TokenBuffer(tokens)
-            val scanner = NodeScanner()
 
-            while (buffer.hasNext()) {
-                val scan = scanner.scan(buffer, table)
-                when (scan) {
-                    is NodeScan.Empty -> {
+            while (!buffer.isEmpty()) {
+                when (val result = table.dispatchStatement(buffer)) {
+                    is Outcome.Error -> {
+                        yield(Outcome.Error(buildParseError(result.error, buffer)))
                         return@sequence
                     }
-                    is NodeScan.Error -> {
-                        yield(Outcome.Error(buildParseError(scan, buffer)))
-                        return@sequence
-                    }
-                    is NodeScan.Ok -> {
-                        yield(Outcome.Ok(scan.node))
-                        buffer.advance(scan.consumed)
+                    is Outcome.Ok -> {
+                        yield(Outcome.Ok(result.value.node))
+                        buffer.advance(result.value.consumed)
                     }
                 }
             }
@@ -69,17 +62,15 @@ class PrintScriptParser : Parser {
     }
 
     private fun buildParseError(
-        scan: NodeScan.Error,
+        fail: parser.internal.model.grammar.GrammarFail,
         buffer: TokenBuffer,
     ): Diagnostic {
-        val tokensAtError = buffer.peek(scan.consumed + 1)
-
-        return if (tokensAtError.size > scan.consumed) {
-            val errorToken = tokensAtError.elementAt(scan.consumed)
-            ParseError(scan.message, scan.category, errorToken.span)
+        val errorToken = buffer.tokenAt(fail.consumed)
+        return if (errorToken != null) {
+            ParseError(fail.message, fail.category, errorToken.span)
         } else {
-            val insertionPoint = buffer.peek(scan.consumed).last().span.end
-            ParseError(scan.message, scan.category, Span(insertionPoint, insertionPoint))
+            val insertionPoint = checkNotNull(buffer.tokenAt(fail.consumed - 1)).span.end
+            ParseError(fail.message, fail.category, Span(insertionPoint, insertionPoint))
         }
     }
 }

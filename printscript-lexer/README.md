@@ -153,7 +153,10 @@ string, or any other character source without changing the lexer, and without
 coupling the contract to a JVM-specific I/O type such as `Reader`. It accepts a
 `version` string because future PrintScript versions may introduce lexical
 differences (new keywords, comment syntax, escape sequences); the current
-implementation only registers a rule table for `"1.0"`.
+implementation registers rule tables for `"1.0"` and `"1.1"`. Version 1.1 extends
+the original keywords with `const`, `boolean`, `true`, `false`, `if`, `else`,
+`readInput`, and `readEnv`, and adds `{` and `}`. These words remain identifiers
+in 1.0, while braces produce lexical errors in 1.0.
 
 Errors are values, not exceptions: each element of the returned sequence is either
 `Outcome.Ok(token)` or `Outcome.Error(diagnostic)`. The sequence stops after the
@@ -640,7 +643,7 @@ responsibility.
 ### Adding a keyword
 
 1. Add the new entry to `TokenType` in the common module.
-2. Add its spelling to `WordRule.reservedWords`.
+2. Add its spelling to the version-specific map passed to `WordRule` in `RuleTableRegistry.kt`.
 3. Add tests proving the exact word is a keyword and longer words remain
    identifiers.
 
@@ -650,7 +653,7 @@ For example, adding `const` must not cause `constant` to become `CONST` plus
 ### Adding a one-character symbol
 
 1. Add its `TokenType`.
-2. Add the character-to-type mapping in `SymbolRule`.
+2. Add the character-to-type mapping passed to `SymbolRule` in `RuleTableRegistry.kt`.
 3. Add lexer tests for its type, lexeme, and span.
 
 ### Adding a new lexical category
@@ -731,7 +734,7 @@ error is the last produced element, not a thrown exception.
 ## Current scope and limitations
 
 The lexer currently implements the lexical elements required for the present
-PrintScript 1.0 subset. It intentionally does not implement:
+PrintScript 1.0 and 1.1 subsets. It intentionally does not implement:
 
 - Comments.
 - Escape sequences in strings.

@@ -3,6 +3,7 @@ package validator.visitor
 import common.model.node.BlockNode
 import common.model.node.ElseBlockNode
 import common.model.node.ElseNode
+import common.model.node.IdentifierNode
 import common.model.node.IfStatementNode
 import common.model.node.LeftParenthesisNode
 import common.model.node.Node
@@ -17,7 +18,6 @@ import common.type.outcome.Outcome
 import common.type.outcome.getOrElse
 import validator.model.category.TypeMismatch
 import validator.model.error.ValidationError
-import validator.model.value.RuntimeValueType
 
 internal class IfStatementVisitor : ContextVisitor {
 
@@ -47,12 +47,16 @@ internal class IfStatementVisitor : ContextVisitor {
         }
 
         val conditionNode = arguments[0]
+        if (conditionNode.type != IdentifierNode) {
+            val error = ValidationError("If condition must be a boolean variable", TypeMismatch, conditionNode.span)
+            return VisitResult(Outcome.Error(error), context)
+        }
         val conditionVisit = table.dispatch(conditionNode, context)
         if (conditionVisit.outcome is Outcome.Error) return conditionVisit
 
         val condition = conditionVisit.outcome.getOrElse { return conditionVisit }
 
-        if (condition.type !is BooleanValueType && condition.type !is RuntimeValueType) {
+        if (condition.type != BooleanValueType) {
             val message = "If condition must be a boolean, got ${condition.type.name}"
             val error = ValidationError(message, TypeMismatch, conditionNode.span)
             return VisitResult(Outcome.Error(error), conditionVisit.context)

@@ -14,6 +14,7 @@ dependencies {
     implementation(project(":printscript-validator"))
     implementation(project(":printscript-linter"))
     implementation(project(":printscript-interpreter"))
+    implementation(project(":printscript-formatter"))
 
     testImplementation(kotlin("test"))
 }

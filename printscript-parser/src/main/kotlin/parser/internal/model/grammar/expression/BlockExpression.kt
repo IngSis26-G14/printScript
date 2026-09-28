@@ -10,6 +10,8 @@ import common.model.token.TokenType
 import common.model.value.StringValue
 import common.type.outcome.Outcome
 import common.type.outcome.getOrElse
+import parser.internal.buffer.TokenCursor
+import parser.internal.buffer.getOrElse
 import parser.internal.model.category.MissingClosingBrace
 import parser.internal.model.category.MissingOpeningBrace
 import parser.internal.model.grammar.GrammarFail
@@ -20,7 +22,7 @@ internal class BlockExpression : Expression {
     override val type = BlockNode
 
     override fun match(
-        tokens: List<Token>,
+        tokens: TokenCursor,
         table: GrammarTable,
     ): Outcome<GrammarMatch, GrammarFail> {
         var consumed = 0
@@ -46,8 +48,9 @@ internal class BlockExpression : Expression {
         consumed += 1
 
         val statements = mutableListOf<Node>()
-        while (consumed < tokens.size && tokens[consumed].type != TokenType.RIGHT_BRACE) {
-            val stmt = table.dispatchStatement(tokens.subList(consumed, tokens.size))
+        while (tokens.tokenAt(consumed)?.type != TokenType.RIGHT_BRACE) {
+            if (tokens.tokenAt(consumed) == null) break
+            val stmt = table.dispatchStatement(tokens.drop(consumed))
                 .getOrElse {
                     return Outcome.Error(
                         GrammarFail(

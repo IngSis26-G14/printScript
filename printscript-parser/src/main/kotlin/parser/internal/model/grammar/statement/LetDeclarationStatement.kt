@@ -15,6 +15,8 @@ import common.model.value.StringValue
 import common.type.option.Option
 import common.type.outcome.Outcome
 import common.type.outcome.getOrElse
+import parser.internal.buffer.TokenCursor
+import parser.internal.buffer.getOrElse
 import parser.internal.model.category.MissingColon
 import parser.internal.model.category.MissingEndOfLine
 import parser.internal.model.category.MissingIdentifier
@@ -30,7 +32,7 @@ internal class LetDeclarationStatement(
     override val type: NodeType = LetDeclarationStatementNode
 
     override fun match(
-        tokens: List<Token>,
+        tokens: TokenCursor,
         table: GrammarTable,
     ): Outcome<GrammarMatch, GrammarFail> {
         var consumed = 0
@@ -163,10 +165,10 @@ internal class LetDeclarationStatement(
     }
 
     private fun parseOptionalAssignment(
-        tokens: List<Token>,
+        tokens: TokenCursor,
         table: GrammarTable,
     ): Outcome<Option<GrammarMatch>, GrammarFail> {
-        if (tokens.isEmpty() || tokens[0].type != TokenType.ASSIGNMENT_OPERATOR) {
+        if (tokens.tokenAt()?.type != TokenType.ASSIGNMENT_OPERATOR) {
             return Outcome.Ok(Option.None)
         }
         val expr = table.dispatchExpression(tokens.drop(1)).getOrElse {
@@ -189,7 +191,7 @@ internal class LetDeclarationStatement(
         typeNodeType: NodeType,
         assignment: Option<GrammarMatch>,
         semicolon: Token,
-        tokens: List<Token>,
+        tokens: TokenCursor,
     ): Node {
         val children = buildList {
             add(
@@ -231,7 +233,7 @@ internal class LetDeclarationStatement(
 
             when (assignment) {
                 is Option.Some -> {
-                    val assignToken = tokens.dropWhile { it.type != TokenType.ASSIGNMENT_OPERATOR }.first()
+                    val assignToken = checkNotNull(tokens.tokenAt(4))
                     add(
                         Node.Leaf(
                             AssignNode,
@@ -260,7 +262,7 @@ internal class LetDeclarationStatement(
         return Node.Composite(
             children = children,
             type = type,
-            span = Span(tokens.first().span.start, semicolon.span.end),
+            span = Span(let.span.start, semicolon.span.end),
         )
     }
 }

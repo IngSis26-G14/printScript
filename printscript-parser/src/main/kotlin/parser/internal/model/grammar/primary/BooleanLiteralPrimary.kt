@@ -7,6 +7,8 @@ import common.model.token.Token
 import common.model.token.TokenType
 import common.model.value.BooleanValue
 import common.type.outcome.Outcome
+import parser.internal.buffer.TokenCursor
+import parser.internal.buffer.getOrElse
 import parser.internal.model.category.MissingBooleanLiteral
 import parser.internal.model.grammar.GrammarFail
 import parser.internal.model.grammar.GrammarMatch
@@ -16,7 +18,7 @@ internal class BooleanLiteralPrimary : Primary {
     override val type: NodeType = BooleanLiteralNode
 
     override fun match(
-        tokens: List<Token>,
+        tokens: TokenCursor,
         table: GrammarTable,
     ): Outcome<GrammarMatch, GrammarFail> {
         val first = tokens.getOrElse(0) {

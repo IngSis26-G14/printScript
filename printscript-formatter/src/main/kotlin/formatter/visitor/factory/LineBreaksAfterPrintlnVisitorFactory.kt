@@ -12,6 +12,7 @@ internal class LineBreaksAfterPrintlnVisitorFactory : ContextVisitorFactory {
 
     override fun create(rule: Rule): ContextVisitor {
         val lineBreaks = (rule.value as IntegerRuleValue).value
+        require(lineBreaks in 0..2) { "line-breaks-after-println must be 0, 1, or 2" }
         return LineBreaksAfterPrintlnVisitor(lineBreaks)
     }
 }

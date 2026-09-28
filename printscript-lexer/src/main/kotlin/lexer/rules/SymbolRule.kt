@@ -7,19 +7,9 @@ import common.model.token.TokenType
 import common.type.outcome.Outcome
 import lexer.SourceCursor
 
-internal class SymbolRule : LexerRule {
-
-    private val symbols = mapOf(
-        '(' to TokenType.LEFT_PARENTHESIS,
-        ')' to TokenType.RIGHT_PARENTHESIS,
-        '=' to TokenType.ASSIGNMENT_OPERATOR,
-        '-' to TokenType.SUBTRACTION_OPERATOR,
-        '+' to TokenType.ADDITION_OPERATOR,
-        '/' to TokenType.DIVISION_OPERATOR,
-        '*' to TokenType.MULTIPLICATION_OPERATOR,
-        ';' to TokenType.SEMICOLON,
-        ':' to TokenType.COLON,
-    )
+internal class SymbolRule(
+    private val symbols: Map<Char, TokenType>,
+) : LexerRule {
 
     override fun matches(cursor: SourceCursor): Boolean = cursor.peek() in symbols
 
