@@ -12,7 +12,6 @@ import formatter.visitor.factory.ContextVisitorFactory
 
 internal interface ContextVisitorTableBuilder {
     val factories: Map<String, ContextVisitorFactory>
-    val defaults: List<Rule>
     val mandatory: Set<String>
 
     fun build(rules: Collection<Rule>): Outcome<FormatterContextVisitorTable, Diagnostic> {
@@ -27,9 +26,8 @@ internal interface ContextVisitorTableBuilder {
         }
 
         val visitors = mutableListOf<ContextVisitor>()
-        // Defaults define execution order; JSON property order does not change the result.
-        for (default in defaults) {
-            val rule = configured[default.signature] ?: default
+        val selectedRules = factories.keys.mapNotNull(configured::get)
+        for (rule in selectedRules) {
             try {
                 visitors.add(factories.getValue(rule.signature).create(rule))
             } catch (_: ClassCastException) {
@@ -42,13 +40,12 @@ internal interface ContextVisitorTableBuilder {
     }
 
     private fun normalizeSpacing(configured: MutableMap<String, Rule>): Diagnostic? {
-        val noSpacing = configured.remove(NoSpacingAroundEqualsRule.signature) ?: return null
+        val noSpacing = configured[NoSpacingAroundEqualsRule.signature] ?: return null
         val value = noSpacing.value as? BooleanRuleValue
             ?: return ConfigurationError("Rule '${noSpacing.signature}' requires a boolean")
         val equivalent = Rule(SpacingAroundEqualsRule.signature, BooleanRuleValue(!value.value))
         val existing = configured[equivalent.signature]
         if (existing != null && existing.value != equivalent.value) return ConfigurationError("Conflicting equals spacing rules")
-        configured[equivalent.signature] = equivalent
         return null
     }
 

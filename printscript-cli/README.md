@@ -48,7 +48,8 @@ and `70` for an unexpected I/O failure.
 
 Formatting writes source text to standard output, preserving exactly the newlines
 produced by the formatter. The input file is not modified. Use a different output
-file when redirecting the result. An empty JSON object selects the defaults.
+file when redirecting the result. An empty JSON object preserves the source
+formatting.
 
 Example `format.json` for version 1.1:
 
@@ -57,10 +58,12 @@ Example `format.json` for version 1.1:
   "enforce-spacing-before-colon-in-declaration": false,
   "enforce-spacing-after-colon-in-declaration": true,
   "enforce-spacing-around-equals": true,
-  "line-breaks-before-println": 1,
+  "line-breaks-after-println": 1,
+  "mandatory-line-break-after-statement": true,
+  "if-brace-same-line": true,
   "indent-inside-if": 2
 }
 ```
 
-See the [formatter configuration](../printscript-formatter/README.md) for defaults,
-mandatory rules, and the meaning of blank lines before `println`.
+See the [formatter configuration](../printscript-formatter/README.md) for the
+available rules and the meaning of blank lines around `println`.

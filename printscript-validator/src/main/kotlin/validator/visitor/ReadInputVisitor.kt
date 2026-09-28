@@ -53,7 +53,7 @@ internal class ReadInputVisitor : ContextVisitor {
         val value = visit.outcome.getOrElse { return visit }
 
         if (value.type != StringValueType && value.type != RuntimeValueType) {
-            val message = "readInput() argument must be a string, got ${value.type.name}"
+            val message = "readInput() argument must be a string literal"
             val error = ValidationError(message, IncorrectMethodCall, argument.span)
             return VisitResult(Outcome.Error(error), visit.context)
         }

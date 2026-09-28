@@ -156,13 +156,13 @@ class CliApplicationTest {
     }
 
     @Test
-    fun `formats source with exact newlines and reports parsing progress`() {
+    fun `formatting with an empty config preserves source and reports parsing progress`() {
         val source = sourceFile("let x:number=1;println(x+2);")
         val config = configFile("{}")
         val result = runCli("formatting", source.toString(), "--config", config.toString())
 
         assertEquals(0, result.exitCode, result.error)
-        assertEquals("let x: number = 1;\nprintln(x + 2);\n", result.output)
+        assertEquals("let x:number=1;println(x+2);", result.output)
         assertContains(result.error, "Parsing:")
         assertEquals("let x:number=1;println(x+2);", Files.readString(source))
     }
@@ -170,10 +170,15 @@ class CliApplicationTest {
     @Test
     fun `formats version 1_1 blocks using JSON options`() {
         val source = sourceFile("if(flag){println(1);}else{println(2);}")
-        val config = configFile("{\"indent-inside-if\":2,\"line-breaks-before-println\":1}")
+        val config = configFile(
+            "{\"indent-inside-if\":2," +
+                "\"line-breaks-before-println\":1," +
+                "\"mandatory-line-break-after-statement\":true," +
+                "\"if-brace-same-line\":true}",
+        )
         val result = runCli("formatting", source.toString(), "-v", "1.1", "-c", config.toString())
         assertEquals(0, result.exitCode, result.error)
-        assertEquals("if (flag) {\n\n  println(1);\n} else {\n\n  println(2);\n}\n", result.output)
+        assertEquals("if(flag) {\n\n  println(1);\n}else {\n\n  println(2);\n}", result.output)
     }
 
     @Test

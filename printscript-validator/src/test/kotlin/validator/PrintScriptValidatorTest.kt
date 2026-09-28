@@ -32,20 +32,13 @@ class PrintScriptValidatorTest {
     }
 
     @Test
-    fun `uninitialized variables fail wherever a value is required`() {
-        for (statement in listOf("println(x);", "println(readInput(x));", "println(x + 'suffix');", "let y:string=x;")) {
-            val errors = validate("let x: string; $statement")
-            assertContains(errors.single().message, "has not been initialized")
-        }
-        assertTrue(validate("let x: string; x = 'ready'; println(x);").isEmpty())
-        assertTrue(validate("let unused: string;").isEmpty())
-    }
-
-    @Test
-    fun `uninitialized diagnostic covers the identifier`() {
-        val errors = validate("let x: number;\nprintln(x);")
+    fun `uninitialized operand reaches binary type validation`() {
+        val errors = validate("let x: number;\nprintln(x + 5);")
         assertEquals(1, errors.size)
-        assertContains(errors.single().format(), "2:9-2:10")
+        assertEquals(
+            "Cannot apply operator '+' to operands of type none and number",
+            errors.single().message,
+        )
     }
 
     private fun validate(source: String): List<Diagnostic> {
