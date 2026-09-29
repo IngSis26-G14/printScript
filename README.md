@@ -67,7 +67,7 @@ CI runs this test as well as the real Gradle checks.
 ## Tests and coverage
 
 `./gradlew check` runs tests, Detekt, Spotless, and the configured merged Kover
-coverage verification. The current merged minimum is **75%**, covering the lexer,
+coverage verification. The current merged minimum is **80%**, covering the lexer,
 parser, interpreter, and CLI. API, common, formatter, validator, and linter are
 excluded from that merged gate; per-module coverage gates are not configured.
 Formatter and validator tests still run as part of `check`.
@@ -81,4 +81,15 @@ and that nested lint rules work without performing runtime input.
 The merged HTML report is at `build/reports/kover/merged/html/index.html`.
 Run `./gradlew koverModulesHtmlReport` to generate module reports and a dashboard
 at `build/reports/kover/modules/index.html`. Dashboard comparisons use the same
-75% target for display; they do not add per-module build gates.
+80% target for display; they do not add per-module build gates.
+
+To view the dashboard and detailed reports in a browser, start the local server
+from the repository root (requires Python 3.9 or newer):
+
+```shell
+./gradlew koverModulesHtmlReport
+python3 scripts/serve-coverage.py
+```
+
+Open <http://127.0.0.1:8000>. Use `--port 8001` to select another port and press
+Ctrl+C to stop the server. The server serves only the generated coverage reports.
