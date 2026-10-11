@@ -8,7 +8,7 @@ import common.model.span.Span
 
 internal data class LexError(
     override val message: String,
-    val span: Span,
+    override val span: Span,
     override val category: Category,
     override val severity: Severity = Error,
 ) : Diagnostic {
