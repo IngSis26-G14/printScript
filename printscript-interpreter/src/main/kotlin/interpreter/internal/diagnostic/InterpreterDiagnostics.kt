@@ -17,7 +17,7 @@ data object Runtime : Category {
 data class InterpreterDiagnostic(
     override val message: String,
     override val category: Category = Semantic,
-    val span: Span? = null,
+    override val span: Span? = null,
 ) : Diagnostic {
     override val severity = Error
 

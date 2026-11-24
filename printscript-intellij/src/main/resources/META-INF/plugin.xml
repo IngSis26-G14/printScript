@@ -1,0 +1,24 @@
+<idea-plugin>
+    <id>org.printscript.intellij</id>
+    <name>PrintScript</name>
+    <version>0.1.0</version>
+    <vendor>PrintScript</vendor>
+    <description>Inline PrintScript diagnostics, formatting warnings, and an undoable formatting action.</description>
+    <idea-version since-build="262" until-build="262.*"/>
+    <depends>com.intellij.modules.platform</depends>
+    <extensions defaultExtensionNs="com.intellij">
+        <fileType name="PrintScript" language="PrintScript" extensions="ps"
+                  implementationClass="printscript.idea.PrintScriptFileType" fieldName="INSTANCE"/>
+        <lang.parserDefinition language="PrintScript" implementationClass="printscript.idea.PrintScriptParserDefinition"/>
+        <externalAnnotator language="PrintScript" implementationClass="printscript.idea.PrintScriptAnnotator"/>
+    </extensions>
+    <applicationListeners>
+        <listener class="printscript.idea.ConfigListener" topic="com.intellij.openapi.vfs.newvfs.BulkFileListener"/>
+    </applicationListeners>
+    <actions>
+        <action id="PrintScript.FormatFile" class="printscript.idea.FormatAction"
+                text="Format PrintScript File" description="Format the current PrintScript file using its configured rules">
+            <add-to-group group-id="EditorPopupMenu" anchor="last"/>
+        </action>
+    </actions>
+</idea-plugin>

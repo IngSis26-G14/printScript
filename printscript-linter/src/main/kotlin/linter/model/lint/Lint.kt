@@ -9,7 +9,7 @@ import linter.model.origin.Lint
 
 internal data class Lint(
     override val message: String,
-    val span: Span,
+    override val span: Span,
     val rule: RuleType,
     override val severity: Severity,
     override val category: Category = Lint,

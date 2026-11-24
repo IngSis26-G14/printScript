@@ -18,7 +18,7 @@ koverMerged {
     verify { rule { bound { minValue = minimumCoverage } } }
     filters {
         projects {
-            excludes += listOf(":printscript-api", ":printscript-common",":printscript-formatter",":printscript-validator",":printscript-linter",)
+            excludes += listOf(":printscript-api", ":printscript-common")
         }
     }
 }

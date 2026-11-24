@@ -17,6 +17,20 @@ The CLI supports `validation`, `execution`, `formatting`, and `analyzing`.
 Formatting writes to standard output; it does not overwrite the source file.
 See the [CLI guide](printscript-cli/README.md) for arguments and exit codes.
 
+## IntelliJ editor support
+
+The [PrintScript IntelliJ plugin](printscript-intellij/README.md) adds inline
+warnings, errors, and an undoable formatting action for `.ps` files in IntelliJ
+IDEA 2026.2. Build the installable ZIP with:
+
+```shell
+python3 scripts/build-intellij-plugin.py
+```
+
+Install it through **Settings → Plugins → Install Plugin from Disk**. Files under
+`examples/` automatically use that directory's `lint.json` and `format.json`.
+See the plugin guide for configuration and installation details.
+
 ## Language and modules
 
 Version 1.0 supports numbers, strings, declarations, assignments, arithmetic,
@@ -68,7 +82,7 @@ CI runs this test as well as the real Gradle checks.
 
 `./gradlew check` runs tests, Detekt, Spotless, and the configured merged Kover
 coverage verification. The current merged minimum is **80%**, covering the lexer,
-parser, interpreter, and CLI. API, common, formatter, validator, and linter are
+parser, interpreter, CLI, and editor adapter. API, common, formatter, validator, and linter are
 excluded from that merged gate; per-module coverage gates are not configured.
 Formatter and validator tests still run as part of `check`.
 
