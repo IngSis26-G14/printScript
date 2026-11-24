@@ -5,7 +5,7 @@ style:
   SpacingBetweenPackageAndImports:
     active: true
   MaxLineLength:
-    active: false
+    active: true
   LoopWithTooManyJumpStatements:
     active: false
   ReturnCount:
